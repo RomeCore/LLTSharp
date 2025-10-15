@@ -149,7 +149,6 @@ namespace LLTSharp.Tests
 			        }
 			    }
 			}
-			
 			""";
 
 			var parser = new LLTParser();

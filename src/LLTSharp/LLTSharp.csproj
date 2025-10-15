@@ -15,7 +15,7 @@
 		<Description>A lightweight .NET template engine for LLM with messages and prompt templates support.</Description>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageTags>template, llm, template-engine, language-models</PackageTags>
-		<RepositoryUrl>https://github.com/RomeCore/RCParsing</RepositoryUrl>
+		<RepositoryUrl>https://github.com/RomeCore/LLTSharp</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	</PropertyGroup>
