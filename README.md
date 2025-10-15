@@ -16,6 +16,20 @@ LLT is designed to make prompt engineering and content generation as powerful an
 - **Expression evaluator** — supports arithmetic, logic, method access, array indexing, and ternary operators  
 - **Library-driven workflow** — import templates from assemblies, files, or strings  
 
+## 📦 Installation
+
+Install the package from NuGet:
+
+```
+dotnet add package LLTSharp
+```
+
+Or via the Package Manager Console:
+
+```
+Install-Package LLTSharp
+```
+
 ## 💡 Example
 
 ```csharp
