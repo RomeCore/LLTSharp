@@ -1,5 +1,8 @@
 # LLTSharp
 
+[![Build](https://github.com/RomeCore/LLTSharp/actions/workflows/build.yml/badge.svg)](https://github.com/RomeCore/LLTSharp/actions/workflows/build.yml)
+[![Tests](https://github.com/RomeCore/LLTSharp/actions/workflows/tests.yml/badge.svg)](https://github.com/RomeCore/LLTSharp/actions/workflows/tests.yml)
+
 A flexible and expressive **template engine for Large Language Model (LLM) prompts and structured message generation** in C#.  
 LLT is designed to make prompt engineering and content generation as powerful and maintainable as regular C# code.
 
