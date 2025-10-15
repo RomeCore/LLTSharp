@@ -1,0 +1,3 @@
+﻿@template sample {
+	Hello, World! This is a template file from embedded resources!
+}
