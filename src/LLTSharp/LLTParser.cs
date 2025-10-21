@@ -531,13 +531,34 @@ namespace LLTSharp
 					return template;
 				});
 
+			var textEscapes = new Dictionary<string, string>
+			{
+				["@@"] = "@",
+				["{{"] = "{",
+				["}}"] = "}"
+			};
+
+			var textForbidden = new string[]
+			{
+				"@", "{", "}", "`````"
+			};
+
 			builder.CreateRule("text_content")
-				.EscapedTextDoubleChars("@{}", allowsEmpty: false)
+				.EscapedText(textEscapes, textForbidden, allowsEmpty: false)
+				.Transform(v => new TextTemplatePlainTextNode(v.GetIntermediateValue<string>()));
+
+			builder.CreateRule("text_multiline_content")
+				.Token(b => b.Between(
+					b => b.Literal("`````"),
+					b => b.TextUntil("`````"),
+					b => b.Literal("`````")
+				))
 				.Transform(v => new TextTemplatePlainTextNode(v.GetIntermediateValue<string>()));
 
 			builder.CreateRule("text_statements")
 				.ZeroOrMore(b => b.Choice(
 					c => c.Rule("text_content"),
+					c => c.Rule("text_multiline_content"),
 					c => c.Rule("text_statement")))
 				.Transform(v =>
 				{
@@ -567,7 +588,7 @@ namespace LLTSharp
 					)
 				.Transform(v => v.GetValue(1));
 
-			builder.CreateRule("text_expression_inner")
+			builder.CreateRule("text_expression")
 				.Rule("simple_expression") // We don't want to use binary expressions in text statements
 				.Optional(b => b
 					.Literal(':')
@@ -578,21 +599,6 @@ namespace LLTSharp
 					return new TextTemplateExpressionNode(v.GetValue<TemplateExpressionNode>(0), format);
 				});
 			
-			builder.CreateRule("text_expression")
-				.Custom(
-					(self, ctx, sett, childSett, children, childrenIds) =>
-					{
-						var result = self.ParseRule(childrenIds[0], ctx, childSett);
-						if (!result.success)
-							return result;
-						var modifierChild = result.children[1];
-						if (modifierChild.length == 0)
-							result.length = result.children[0].length;
-						return result;
-					},
-					b => b.Rule("text_expression_inner")
-				);
-
 			builder.CreateRule("text_if")
 				.Keyword("if")
 				.Rule("expression")

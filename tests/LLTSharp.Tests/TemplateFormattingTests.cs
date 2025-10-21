@@ -64,6 +64,77 @@ namespace LLTSharp.Tests
 		}
 
 		[Fact]
+		public void IfElseWithMultilineFormatting()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template if_else_format
+			{
+				Greetings, @name!
+				@if code_type == 'csharp'
+				{
+					`````
+					class Program
+					{
+						public static void Main(string[] args)
+						{
+							Console.WriteLine("Hello, world, @user!");
+						}
+					}
+					`````
+				}
+				else if code_type == 'python'
+				{
+
+					`````
+					if __name__ == "main":
+						print("Hello, world, @user!")
+					`````
+				}
+
+				Have a nice day.
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var dataCsharp = new { name = "Andrew", code_type = "csharp" };
+			var dataPython = new { name = "Alice", code_type = "python" };
+
+			var renderedCsharp = template.Render(dataCsharp).ToString();
+			var renderedPython = template.Render(dataPython).ToString();
+
+			var expectedCsharp =
+			"""
+			Greetings, Andrew!
+			class Program
+			{
+				public static void Main(string[] args)
+				{
+					Console.WriteLine("Hello, world, @user!");
+				}
+			}
+
+			Have a nice day.
+			""";
+
+			var expectedPython =
+			"""
+			Greetings, Alice!
+
+			if __name__ == "main":
+				print("Hello, world, @user!")
+
+			Have a nice day.
+			""";
+
+			Assert.Equal(expectedCsharp, renderedCsharp);
+			Assert.Equal(expectedPython, renderedPython);
+		}
+
+		[Fact]
 		public void ForeachTemplateFormatting()
 		{
 			var parser = new LLTParser();
