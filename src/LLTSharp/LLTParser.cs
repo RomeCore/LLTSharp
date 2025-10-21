@@ -227,7 +227,7 @@ namespace LLTSharp
 					return target;
 				});
 
-			builder.CreateRule("nop_expression")
+			builder.CreateRule("simple_expression")
 				.Rule("prefix_operator");
 
 			// Operators //
@@ -372,12 +372,11 @@ namespace LLTSharp
 			builder.CreateRule("message_statements")
 				.ZeroOrMore(b => b
 					.Literal('@')
-						.ConfigureLast(c => c.SkippingStrategy(ParserSkippingStrategy.SkipBeforeParsingGreedy))
 					.Choice(
 						c => c.Rule("message_block"),
 						c => c.Rule("messages_if"),
 						c => c.Rule("messages_foreach"),
-						// c => c.Rule("messages_while"),
+						c => c.Rule("messages_while"),
 						c => c.Rule("messages_render"),
 						c => c.Rule("messages_var_assignment"))
 					.Transform(v => v.GetValue(1)))
@@ -409,7 +408,7 @@ namespace LLTSharp
 			builder.CreateRule("message_block_variable_role")
 				.Keyword("message")
 				.Literal('{')
-				.Literal('@').Keyword("role").Rule("nop_expression") // 4
+				.Literal('@').Keyword("role").Rule("simple_expression") // 4
 				.Rule("text_statements") // 5
 				.Literal('}')
 				.Transform(v =>
@@ -451,18 +450,23 @@ namespace LLTSharp
 					return new MessagesTemplateForeachNode(collection, block, variable);
 				});
 
-			// TEMPORARY EXCLUDED: messages while loop
 			builder.CreateRule("messages_while")
 				.Keyword("while")
 				.Rule("expression")
-				.Rule("messages_template_block");
+				.Rule("messages_template_block")
+				.Transform(v =>
+				{
+					var expression = v.GetValue<TemplateExpressionNode>(1);
+					var block = v.GetValue<MessagesTemplateNode>(2);
+					return new MessagesTemplateWhileNode(expression, block);
+				});
 
 			builder.CreateRule("messages_render")
 				.Keyword("render")
-				.Rule("nop_expression") // 1
+				.Rule("simple_expression") // 1
 				.Optional(b => b
 					.Keyword("with")
-					.Rule("nop_expression")
+					.Rule("simple_expression")
 					.Transform(v => v.GetValue(1)))
 				.Transform(v =>
 				{
@@ -557,14 +561,14 @@ namespace LLTSharp
 					b => b.Rule("text_if"),
 					b => b.Rule("text_foreach"),
 					b => b.Rule("text_render"),
-					// b => b.Rule("text_while"),
+					b => b.Rule("text_while"),
 					b => b.Rule("text_var_assignment"),
 					b => b.Rule("text_expression")
 					)
 				.Transform(v => v.GetValue(1));
 
-			builder.CreateRule("text_expression")
-				.Rule("nop_expression") // We don't want to use binary expressions in text statements
+			builder.CreateRule("text_expression_inner")
+				.Rule("simple_expression") // We don't want to use binary expressions in text statements
 				.Optional(b => b
 					.Literal(':')
 					.Token("raw_string"))
@@ -573,6 +577,21 @@ namespace LLTSharp
 					var format = v.Children[1].Children.Count > 0 ? v.Children[1].Children[0].GetValue<string>(1) : null;
 					return new TextTemplateExpressionNode(v.GetValue<TemplateExpressionNode>(0), format);
 				});
+			
+			builder.CreateRule("text_expression")
+				.Custom(
+					(self, ctx, sett, childSett, children, childrenIds) =>
+					{
+						var result = self.ParseRule(childrenIds[0], ctx, childSett);
+						if (!result.success)
+							return result;
+						var modifierChild = result.children[1];
+						if (modifierChild.length == 0)
+							result.length = result.children[0].length;
+						return result;
+					},
+					b => b.Rule("text_expression_inner")
+				);
 
 			builder.CreateRule("text_if")
 				.Keyword("if")
@@ -607,11 +626,16 @@ namespace LLTSharp
 					return new TextTemplateForeachNode(collection, block, variable);
 				});
 
-			// TEMPORARY EXCLUDED: text while loop
 			builder.CreateRule("text_while")
 				.Keyword("while")
 				.Rule("expression")
-				.Rule("text_template_block");
+				.Rule("text_template_block")
+				.Transform(v =>
+				{
+					var expression = v.GetValue<TemplateExpressionNode>(1);
+					var block = v.GetValue<TextTemplateNode>(2);
+					return new TextTemplateWhileNode(expression, block);
+				});
 
 			builder.CreateRule("text_render")
 				.Keyword("render")
@@ -632,7 +656,7 @@ namespace LLTSharp
 					.Keyword("let")
 					.Token("identifier")
 					.Literal("=")
-					.Rule("nop_expression")
+					.Rule("simple_expression")
 					.Transform(v =>
 					{
 						var name = v.GetValue<string>(1);
@@ -641,7 +665,7 @@ namespace LLTSharp
 					}), b => b
 					.Token("identifier")
 					.Literal("=")
-					.Rule("nop_expression")
+					.Rule("simple_expression")
 					.Transform(v =>
 					{
 						var name = v.GetValue<string>(0);
@@ -683,6 +707,12 @@ namespace LLTSharp
 							case "model_family":
 								metadata.Add(new TargetModelFamilyMetadata(pair.Value.ToString()));
 								break;
+							case "version":
+								metadata.Add(new VersionMetadata((int)((double)pair.Value.GetValue())));
+								break;
+							default:
+								metadata.Add(new AdditionalMetadata(pair.Key, pair.Value.GetValue()));
+								break;
 						}
 					}
 
@@ -703,11 +733,11 @@ namespace LLTSharp
 			builder.Settings
 				.Skip(s => s.Choice(
 					c => c.Whitespaces(),
-					c => c.Literal("@//").TextUntil('\n', '\r'), // @// C#-like comments
+					c => c.Literal("@/").TextUntil('\n', '\r'), // @/ C#-like comments
 					c => c.Literal("@*").TextUntil("*@").Literal("*@")) // @*...*@ comments
 					.ConfigureForSkip(), // Ignore all errors when parsing comments and unnecessary whitespace
 					ParserSkippingStrategy.TryParseThenSkipLazy) // Allows rules to capture skip-rules contents if can, such as whitespaces
-				.UseCaching(); // If caching is disabled, prepare to wait for a long time (seconds) when encountering an error :P (you will also get a million of errors, seriously)
+				.UseCaching().RecordWalkTrace(); // If caching is disabled, prepare to wait for a long time (seconds) when encountering an error :P (you will also get a million of errors, seriously)
 
 			// ---- Values ---- //
 			DeclareValues(builder);
@@ -728,6 +758,12 @@ namespace LLTSharp
 		}
 
 		public ParsedRuleResultBase ParseAST(string templateString)
+		{
+			var ctx = new LLTParsingContext { LocalLibrary = new TemplateLibrary() };
+			return _parser.Parse(templateString, ctx);
+		}
+		
+		public ParsedRuleResultBase ParseOptimizedAST(string templateString)
 		{
 			var ctx = new LLTParsingContext { LocalLibrary = new TemplateLibrary() };
 			return _parser.Parse(templateString, ctx).Optimized(ParseTreeOptimization.Default);

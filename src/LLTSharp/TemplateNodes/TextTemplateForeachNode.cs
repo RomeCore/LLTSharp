@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using LLTSharp.DataAccessors;
+using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {

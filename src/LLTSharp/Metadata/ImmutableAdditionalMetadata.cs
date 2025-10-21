@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Text;
+using LLTSharp.Utils;
 
 namespace LLTSharp.Metadata
 {
@@ -117,6 +118,19 @@ namespace LLTSharp.Metadata
 		public override IEnumerable<string> GetDynamicMemberNames()
 		{
 			return _metadata.Keys;
+		}
+
+		public override bool Equals(object? obj)
+		{
+			return obj is ImmutableAdditionalMetadata other &&
+				DictionaryUtils.DictionariesEqual(_metadata, other._metadata);
+		}
+
+		public override int GetHashCode()
+		{
+			int hash = 17;
+			hash = hash * 397 + DictionaryUtils.GetDictionaryHashCode(_metadata);
+			return hash;
 		}
 	}
 }

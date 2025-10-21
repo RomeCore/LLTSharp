@@ -5,11 +5,19 @@ using System.Text;
 using System.Threading.Tasks;
 using LLTSharp;
 using RCParsing;
+using Xunit.Abstractions;
 
 namespace LLTSharp.Tests
 {
 	public class BasicTemplateParsingTests
 	{
+		private ITestOutputHelper output;
+
+		public BasicTemplateParsingTests(ITestOutputHelper output)
+		{
+			this.output = output;
+		}
+
 		[Fact]
 		public void ExpressionsASTPasing()
 		{
@@ -153,6 +161,24 @@ namespace LLTSharp.Tests
 
 			var parser = new LLTParser();
 			parser.Parse(templateStr);
+		}
+
+		[Fact]
+		public void MultipleInlineVariables()
+		{
+			string templateStr =
+			"""
+			@template {
+			    Here is some variable: @var @number
+			}
+			""";
+
+			var parser = new LLTParser();
+			var ast = parser.ParseAST(templateStr);
+			var ctx = ast.Context;
+			var value = ast.GetValue<IEnumerable<ITemplate>>();
+
+			output.WriteLine(ctx.walkTrace.Render(400));
 		}
 	}
 }

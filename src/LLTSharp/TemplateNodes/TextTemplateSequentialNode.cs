@@ -88,16 +88,17 @@ namespace LLTSharp.TemplateNodes
 						int startIndex = 0;
 						int indent = 0;
 
-						while (startIndex < line.Length && indent < maxIndent)
-						{
-							if (line[startIndex] == '\t')
-								indent += 4;
-							else if (line[startIndex] == ' ')
-								indent++;
-							else
-								break;
-							startIndex++;
-						}
+						if (li > 0)
+							while (startIndex < line.Length && indent < maxIndent)
+							{
+								if (line[startIndex] == '\t')
+									indent += 4;
+								else if (line[startIndex] == ' ')
+									indent++;
+								else
+									break;
+								startIndex++;
+							}
 
 						if (li == endLine - 1)
 							sb.Append(line.Substring(startIndex));
