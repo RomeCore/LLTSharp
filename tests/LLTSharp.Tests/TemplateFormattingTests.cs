@@ -108,6 +108,183 @@ namespace LLTSharp.Tests
 		}
 
 		[Fact]
+		public void ForeachInlineListTemplateFormatting()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template foreach_format
+			{
+				Grocery list:
+			
+				@foreach item in [
+					{ name: 'Fish', quantity: 5 },
+					{ name: 'Meat', quantity: 10 },
+					{ name: 'Eggs', quantity: 0 } @/ Why eggs is zero???
+					]
+				{
+					@if item.quantity > 0
+					{
+						- @item.name: @item.quantity
+					}
+				}
+
+				End of list.
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var rendered = template.Render().ToString();
+
+			var expected =
+			"""
+			Grocery list:
+
+			- Fish: 5
+			- Meat: 10
+
+			End of list.
+			""";
+
+			Assert.Equal(expected, rendered);
+		}
+
+		[Fact]
+		public void ComplexTemplateScenarioFormatting()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template complex_demo
+			{
+				@let attempt = 1
+				Processing datasets:
+
+				@foreach dataset in [
+					{ name: 'set-A', items: [1, 3, 5] },
+					{ name: 'set-B', items: [2, 4, 0] },
+					{ name: 'set-C', items: [] }
+				]
+				{
+					@if attempt == 1 {
+						---
+					}
+					@let sum = 0
+					Dataset: @dataset.name
+					@foreach value in dataset.items
+					{
+						@if value > 0
+						{
+							Value: @value
+							@sum = (sum + value)
+						}
+						else
+						{
+							Skipping zero.
+						}
+					}
+					@if sum > 0
+					{
+						Sum: @sum
+						@let retry = 2
+						@while retry > 0
+						{
+							Retry iteration @retry for @dataset.name
+							@retry = (retry - 1)
+						}
+					}
+					else
+					{
+						No positive values!
+					}
+					@attempt = (attempt + 1)
+					---
+				}
+
+				All done. Total attempts: @attempt
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var rendered = template.Render(new { }).ToString();
+
+			var expected =
+			"""
+			Processing datasets:
+
+			---
+			Dataset: set-A
+			Value: 1
+			Value: 3
+			Value: 5
+			Sum: 9
+			Retry iteration 2 for set-A
+			Retry iteration 1 for set-A
+			---
+			Dataset: set-B
+			Value: 2
+			Value: 4
+			Skipping zero.
+			Sum: 6
+			Retry iteration 2 for set-B
+			Retry iteration 1 for set-B
+			---
+			Dataset: set-C
+			No positive values!
+			---
+
+			All done. Total attempts: 4
+			""";
+
+			Assert.Equal(expected, rendered);
+		}
+
+		[Fact]
+		public void WhileTemplateFormatting()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template while_format
+			{
+				Counter demo:
+
+				@let counter = 3
+				@while counter > 0
+				{
+					Current counter: @counter
+					@counter = (counter - 1)
+				}
+
+				Done.
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var rendered = template.Render(new { }).ToString();
+
+			var expected =
+			"""
+			Counter demo:
+
+			Current counter: 3
+			Current counter: 2
+			Current counter: 1
+
+			Done.
+			""";
+
+			Assert.Equal(expected, rendered);
+		}
+
+
+		[Fact]
 		public void NestedIfFormatting()
 		{
 			var parser = new LLTParser();
@@ -166,6 +343,51 @@ namespace LLTSharp.Tests
 			Assert.Equal(expectedAdmin, renderedAdmin);
 			Assert.Equal(expectedUser, renderedUser);
 			Assert.Equal(expectedYoung, renderedYoung);
+		}
+
+		[Fact]
+		public void NestedTemplateRendering()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template nested_host
+			{
+				Here is groceries list:
+				@render 'nested_template'
+			}
+
+			@template nested_template
+			{
+				Here is nested list:
+				@foreach item in ctx
+				{
+					Item: @item
+				}
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var groceries = new[] {
+				"Apples",
+				"Bananas",
+				"Oranges"
+			};
+
+			var rendered = template.Render(groceries).ToString();
+
+			var expected =
+			"""
+			Here is groceries list:
+			Here is nested list:
+			Item: Apples
+			Item: Bananas
+			Item: Oranges
+			""";
+
+			Assert.Equal(expected, rendered);
 		}
 
 		[Fact]

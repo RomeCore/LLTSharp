@@ -71,7 +71,10 @@ namespace LLTSharp
 
 			var types = new List<Type>();
 			types.Add(type);
-			types.AddRange(GetHierarchySet(type.BaseType));
+
+			var baseType = type.BaseType;
+			if (baseType != null)
+				types.AddRange(GetHierarchySet(baseType));
 			foreach (var iface in type.GetInterfaces())
 				types.AddRange(GetHierarchySet(iface));
 
