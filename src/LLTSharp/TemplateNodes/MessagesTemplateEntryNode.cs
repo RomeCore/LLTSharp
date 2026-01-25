@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -32,21 +31,21 @@ namespace LLTSharp.TemplateNodes
 			Child = child ?? throw new ArgumentNullException(nameof(child));
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
 			var role = Role.Evaluate(context);
 			var content = Child.Render(context);
 
-			ChatMessage message = role.ToString() switch
+			Message message = role.ToString() switch
 			{
-				"system" => new ChatMessage(ChatRole.System, content),
-				"user" => new ChatMessage(ChatRole.User, content),
-				"assistant" => new ChatMessage(ChatRole.Assistant, content),
+				"system" => new Message(LLTSharp.Role.System, content),
+				"user" => new Message(LLTSharp.Role.User, content),
+				"assistant" => new Message(LLTSharp.Role.Assistant, content),
 				// "tool" => new ToolMessage(content), // TODO: Add support for tool call ids and tool names
 				"tool" => throw new TemplateRuntimeException($"Tool messages are not yet supported.", dataAccessor: context, messagesTemplateNode: this),
 				_ => throw new TemplateRuntimeException($"Invalid role '{role}'.", dataAccessor: context, messagesTemplateNode: this),
 			};
-			return new ChatMessage[] { message };
+			return new Message[] { message };
 		}
 
 		public override void Refine(int depth)

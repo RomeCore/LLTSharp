@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using LLTSharp.Metadata;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp
 {
@@ -39,7 +38,7 @@ namespace LLTSharp
 		/// </summary>
 		/// <param name="context">The context accessor to use for rendering.</param>
 		/// <returns>The rendered prompt as a collection of messages.</returns>
-		public IEnumerable<ChatMessage> Render(object? context = null)
+		public IEnumerable<Message> Render(object? context = null)
 		{
 			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, library: LocalLibrary);
 			return _node.Render(ctx);

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -39,13 +37,13 @@ namespace LLTSharp.TemplateNodes
 			AssignsToExisting = assignsToExisting;
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
 			if (AssignsToExisting)
 				context.AssignVariable(VariableName, Expression.Evaluate(context));
 			else
 				context.SetVariable(VariableName, Expression.Evaluate(context));
-			return Enumerable.Empty<ChatMessage>();
+			return Enumerable.Empty<Message>();
 		}
 	}
 }

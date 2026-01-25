@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Text;
 using LLTSharp.DataAccessors;
 using LLTSharp.Metadata;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp
 {
@@ -223,7 +222,7 @@ namespace LLTSharp
 			if (template == null)
 				throw new TemplateRuntimeException($"Template '{identifier}' not found.");
 
-			if (template is not PromptTemplate && template is not PlaintextTemplate)
+			if (template is not TextTemplate && template is not PlaintextTemplate)
 				throw new TemplateRuntimeException($"Template '{identifier}' is not a text template.");
 
 			var context = newContext ?? this;
@@ -239,7 +238,7 @@ namespace LLTSharp
 		/// <param name="identifier">The identifier of the messages template to render.</param>
 		/// <param name="newContext">The new context to use for rendering the template. If null, uses the current context.</param>
 		/// <returns>The rendered template as a collection of messages.</returns>
-		public IEnumerable<ChatMessage> RenderMessagesTemplate(string identifier, TemplateDataAccessor? newContext)
+		public IEnumerable<Message> RenderMessagesTemplate(string identifier, TemplateDataAccessor? newContext)
 		{
 			var template = Library.TryRetrieve(identifier);
 			if (template == null)

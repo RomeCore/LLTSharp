@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -28,9 +27,9 @@ namespace LLTSharp.TemplateNodes
 			Child = child ?? throw new ArgumentNullException(nameof(child));
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
-			List<ChatMessage> messages = new List<ChatMessage>();
+			List<Message> messages = new List<Message>();
 
 			context.PushFrame();
 			try

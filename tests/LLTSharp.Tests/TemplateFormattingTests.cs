@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.Tests
 {
@@ -61,6 +60,77 @@ namespace LLTSharp.Tests
 
 			Assert.Equal(expectedAdult, renderedAdult);
 			Assert.Equal(expectedYoung, renderedYoung);
+		}
+
+		[Fact]
+		public void IfElseWithMultilineFormatting()
+		{
+			var parser = new LLTParser();
+
+			var templateStr =
+			"""
+			@template if_else_format
+			{
+				Greetings, @name!
+				@if code_type == 'csharp'
+				{
+					`````
+					class Program
+					{
+						public static void Main(string[] args)
+						{
+							Console.WriteLine("Hello, world, @user!");
+						}
+					}
+					`````
+				}
+				else if code_type == 'python'
+				{
+
+					`````
+					if __name__ == "main":
+						print("Hello, world, @user!")
+					`````
+				}
+
+				Have a nice day.
+			}
+			""";
+
+			var template = parser.Parse(templateStr).First();
+
+			var dataCsharp = new { name = "Andrew", code_type = "csharp" };
+			var dataPython = new { name = "Alice", code_type = "python" };
+
+			var renderedCsharp = template.Render(dataCsharp).ToString();
+			var renderedPython = template.Render(dataPython).ToString();
+
+			var expectedCsharp =
+			"""
+			Greetings, Andrew!
+			class Program
+			{
+				public static void Main(string[] args)
+				{
+					Console.WriteLine("Hello, world, @user!");
+				}
+			}
+
+			Have a nice day.
+			""";
+
+			var expectedPython =
+			"""
+			Greetings, Alice!
+
+			if __name__ == "main":
+				print("Hello, world, @user!")
+
+			Have a nice day.
+			""";
+
+			Assert.Equal(expectedCsharp, renderedCsharp);
+			Assert.Equal(expectedPython, renderedPython);
 		}
 
 		[Fact]
@@ -458,7 +528,7 @@ namespace LLTSharp.Tests
 				instructions = new[] { "Do this", "Do that" }
 			};
 
-			var messages = (IEnumerable<ChatMessage>)template.Render(context);
+			var messages = (IEnumerable<Message>)template.Render(context);
 
 			var system = messages.ElementAt(0);
 			var user1 = messages.ElementAt(1);
@@ -474,12 +544,12 @@ namespace LLTSharp.Tests
 			Instruction 2: Do that
 			""";
 
-			Assert.Equal(ChatRole.System, system.Role);
-			Assert.Equal(expectedSystemContent, system.Text);
-			Assert.Equal(ChatRole.User, user1.Role);
-			Assert.Equal("Hello, i am Alex!", user1.Text);
-			Assert.Equal("Hello, i am Rob!", user2.Text);
-			Assert.Equal("Hello, i am John!", user3.Text);
+			Assert.Equal(Role.System, system.Role);
+			Assert.Equal(expectedSystemContent, system.Content);
+			Assert.Equal(Role.User, user1.Role);
+			Assert.Equal("Hello, i am Alex!", user1.Content);
+			Assert.Equal("Hello, i am Rob!", user2.Content);
+			Assert.Equal("Hello, i am John!", user3.Content);
 		}
 	}
 }

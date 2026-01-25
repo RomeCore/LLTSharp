@@ -86,14 +86,14 @@ namespace LLTSharp
 			builder.CreateRule("constant_array")
 				.Literal("[")
 				.ZeroOrMoreSeparated(b => b.Rule("constant"), b => b.Literal(","), allowTrailingSeparator: true)
-					.ConfigureLast(c => c.SkippingStrategy(ParserSkippingStrategy.SkipBeforeParsingGreedy))
+					.ConfigureLast(c => c.Skip(b => b.Rule("skip"), ParserSkippingStrategy.SkipBeforeParsingGreedy))
 				.Literal("]")
 				.Transform(v => new TemplateArrayAccessor(v.Children[1].SelectValues<TemplateDataAccessor>()));
 
 			builder.CreateRule("constant_object")
 				.Literal("{")
 				.ZeroOrMoreSeparated(b => b.Rule("constant_pair"), b => b.Literal(","), allowTrailingSeparator: true)
-					.ConfigureLast(c => c.SkippingStrategy(ParserSkippingStrategy.SkipBeforeParsingGreedy))
+					.ConfigureLast(c => c.Skip(b => b.Rule("skip"), ParserSkippingStrategy.SkipBeforeParsingGreedy))
 				.Literal("}")
 				.Transform(v =>
 				{
@@ -526,18 +526,39 @@ namespace LLTSharp
 					node.Refine(depth: 1);
 
 					var library = v.GetParsingParameter<LLTParsingContext>().LocalLibrary;
-					var template = new PromptTemplate(node, new MetadataCollection(metadata), library);
+					var template = new TextTemplate(node, new MetadataCollection(metadata), library);
 					library.Add(template);
 					return template;
 				});
 
+			var textEscapes = new Dictionary<string, string>
+			{
+				["@@"] = "@",
+				["{{"] = "{",
+				["}}"] = "}"
+			};
+
+			var textForbidden = new string[]
+			{
+				"@", "{", "}", "`````"
+			};
+
 			builder.CreateRule("text_content")
-				.EscapedTextDoubleChars("@{}", allowsEmpty: false)
+				.EscapedText(textEscapes, textForbidden, allowsEmpty: false)
+				.Transform(v => new TextTemplatePlainTextNode(v.GetIntermediateValue<string>()));
+
+			builder.CreateRule("text_multiline_content")
+				.Token(b => b.Between(
+					b => b.Literal("`````"),
+					b => b.TextUntil("`````"),
+					b => b.Literal("`````")
+				))
 				.Transform(v => new TextTemplatePlainTextNode(v.GetIntermediateValue<string>()));
 
 			builder.CreateRule("text_statements")
 				.ZeroOrMore(b => b.Choice(
 					c => c.Rule("text_content"),
+					c => c.Rule("text_multiline_content"),
 					c => c.Rule("text_statement")))
 				.Transform(v =>
 				{
@@ -567,7 +588,7 @@ namespace LLTSharp
 					)
 				.Transform(v => v.GetValue(1));
 
-			builder.CreateRule("text_expression_inner")
+			builder.CreateRule("text_expression")
 				.Rule("simple_expression") // We don't want to use binary expressions in text statements
 				.Optional(b => b
 					.Literal(':')
@@ -578,21 +599,6 @@ namespace LLTSharp
 					return new TextTemplateExpressionNode(v.GetValue<TemplateExpressionNode>(0), format);
 				});
 			
-			builder.CreateRule("text_expression")
-				.Custom(
-					(self, ctx, sett, childSett, children, childrenIds) =>
-					{
-						var result = self.ParseRule(childrenIds[0], ctx, childSett);
-						if (!result.success)
-							return result;
-						var modifierChild = result.children[1];
-						if (modifierChild.length == 0)
-							result.length = result.children[0].length;
-						return result;
-					},
-					b => b.Rule("text_expression_inner")
-				);
-
 			builder.CreateRule("text_if")
 				.Keyword("if")
 				.Rule("expression")
@@ -729,15 +735,18 @@ namespace LLTSharp
 		{
 			var builder = new ParserBuilder();
 
-			// Settings //
-			builder.Settings
-				.Skip(s => s.Choice(
+			// Skip rule //
+			builder.CreateRule("skip")
+				.Choice(
 					c => c.Whitespaces(),
 					c => c.Literal("@/").TextUntil('\n', '\r'), // @/ C#-like comments
 					c => c.Literal("@*").TextUntil("*@").Literal("*@")) // @*...*@ comments
-					.ConfigureForSkip(), // Ignore all errors when parsing comments and unnecessary whitespace
-					ParserSkippingStrategy.TryParseThenSkipLazy) // Allows rules to capture skip-rules contents if can, such as whitespaces
-				.UseCaching().RecordWalkTrace(); // If caching is disabled, prepare to wait for a long time (seconds) when encountering an error :P (you will also get a million of errors, seriously)
+					.ConfigureForSkip(); // Ignore all errors when parsing comments and unnecessary whitespace
+
+			// Settings //
+			builder.Settings
+				.Skip(b => b.Rule("skip"), ParserSkippingStrategy.TryParseThenSkipLazy) // Allows rules to capture skip-rules contents if can, such as whitespaces
+				.UseCaching(); // If caching is disabled, prepare to wait for a long time (seconds) when encountering an error :P (you will also get a million of errors, seriously)
 
 			// ---- Values ---- //
 			DeclareValues(builder);

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -31,7 +29,7 @@ namespace LLTSharp.TemplateNodes
 			Context = context;
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
 			var templateName = Name.Evaluate(context).ToString(); // Evaluate the expression to get the template name
 			var newContext = Context?.Evaluate(context);

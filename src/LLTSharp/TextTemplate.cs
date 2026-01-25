@@ -8,9 +8,9 @@ using LLTSharp.Metadata;
 namespace LLTSharp
 {
 	/// <summary>
-	/// Represents a prompt template for generating prompts.
+	/// Represents a text template for generating strings.
 	/// </summary>
-	public class PromptTemplate : ITemplate
+	public class TextTemplate : ITextTemplate
 	{
 		private readonly TextTemplateNode _node;
 
@@ -22,13 +22,13 @@ namespace LLTSharp
 		public TemplateLibrary LocalLibrary { get; }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="PromptTemplate"/> class.
+		/// Initializes a new instance of the <see cref="TextTemplate"/> class.
 		/// </summary>
 		/// <param name="mainNode">The main node of the template.</param>
 		/// <param name="metadata">The metadata associated with this template.</param>
 		/// <param name="localLibrary">The local library associated with this prompt template.</param>
 		/// <exception cref="ArgumentNullException"></exception>
-		public PromptTemplate(TextTemplateNode mainNode, IMetadataCollection metadata, TemplateLibrary localLibrary)
+		public TextTemplate(TextTemplateNode mainNode, IMetadataCollection metadata, TemplateLibrary localLibrary)
 		{
 			_node = mainNode ?? throw new ArgumentNullException(nameof(mainNode));
 			Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
@@ -36,10 +36,10 @@ namespace LLTSharp
 		}
 
 		/// <summary>
-		/// Renders the prompt template using the provided data accessor.
+		/// Renders the text template using the provided data accessor.
 		/// </summary>
 		/// <param name="context">The context accessor to use for rendering.</param>
-		/// <returns>The rendered prompt as a string.</returns>
+		/// <returns>The rendered text as a string.</returns>
 		public string Render(object? context = null)
 		{
 			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, library: LocalLibrary);

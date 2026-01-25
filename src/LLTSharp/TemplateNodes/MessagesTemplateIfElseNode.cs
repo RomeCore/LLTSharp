@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -40,9 +38,9 @@ namespace LLTSharp.TemplateNodes
 			ElseBranch = elseBranch;
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
-			IEnumerable<ChatMessage>? result = null;
+			IEnumerable<Message>? result = null;
 
 			var conditionResult = Condition.Evaluate(context);
 
@@ -55,7 +53,7 @@ namespace LLTSharp.TemplateNodes
 
 			context.PopFrame();
 
-			return result ?? Enumerable.Empty<ChatMessage>();
+			return result ?? Enumerable.Empty<Message>();
 		}
 
 		public override void Refine(int depth)
