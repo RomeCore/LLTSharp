@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LLTSharp.Metadata;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.Tests
 {
@@ -182,15 +181,15 @@ namespace LLTSharp.Tests
 
 			var template = parser.Parse(templateStr).First();
 			var context = new { name = "Alex" };
-			var messages = (IEnumerable<ChatMessage>)template.Render(context);
+			var messages = (IEnumerable<Message>)template.Render(context);
 
 			var system = messages.ElementAt(0);
 			var user = messages.ElementAt(1);
 
-			Assert.Equal(ChatRole.System, system.Role);
-			Assert.Contains("You are a helpful assistant.", system.Text);
-			Assert.Equal(ChatRole.User, user.Role);
-			Assert.Contains("Hello, i am Alex!", user.Text);
+			Assert.Equal(Role.System, system.Role);
+			Assert.Contains("You are a helpful assistant.", system.Content);
+			Assert.Equal(Role.User, user.Role);
+			Assert.Contains("Hello, i am Alex!", user.Content);
 		}
 	}
 }

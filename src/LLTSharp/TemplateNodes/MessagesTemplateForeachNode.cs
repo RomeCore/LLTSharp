@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using LLTSharp.DataAccessors;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -41,7 +39,7 @@ namespace LLTSharp.TemplateNodes
 			IterableName = string.IsNullOrEmpty(iterableName) ? throw new ArgumentException("The iterable name cannot be null or empty.", nameof(iterableName)) : iterableName;
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
 			var source = Source.Evaluate(context);
 
@@ -49,7 +47,7 @@ namespace LLTSharp.TemplateNodes
 				throw new TemplateRuntimeException($"The source expression does not provide an enumerable data source.",
 					dataAccessor: context, expressionNode: Source);
 
-			List<ChatMessage> messages = new List<ChatMessage>();
+			List<Message> messages = new List<Message>();
 
 			context.PushFrame();
 			foreach (var item in enumerableSource)

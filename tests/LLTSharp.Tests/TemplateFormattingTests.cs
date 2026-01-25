@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.Tests
 {
@@ -529,7 +528,7 @@ namespace LLTSharp.Tests
 				instructions = new[] { "Do this", "Do that" }
 			};
 
-			var messages = (IEnumerable<ChatMessage>)template.Render(context);
+			var messages = (IEnumerable<Message>)template.Render(context);
 
 			var system = messages.ElementAt(0);
 			var user1 = messages.ElementAt(1);
@@ -545,12 +544,12 @@ namespace LLTSharp.Tests
 			Instruction 2: Do that
 			""";
 
-			Assert.Equal(ChatRole.System, system.Role);
-			Assert.Equal(expectedSystemContent, system.Text);
-			Assert.Equal(ChatRole.User, user1.Role);
-			Assert.Equal("Hello, i am Alex!", user1.Text);
-			Assert.Equal("Hello, i am Rob!", user2.Text);
-			Assert.Equal("Hello, i am John!", user3.Text);
+			Assert.Equal(Role.System, system.Role);
+			Assert.Equal(expectedSystemContent, system.Content);
+			Assert.Equal(Role.User, user1.Role);
+			Assert.Equal("Hello, i am Alex!", user1.Content);
+			Assert.Equal("Hello, i am Rob!", user2.Content);
+			Assert.Equal("Hello, i am John!", user3.Content);
 		}
 	}
 }

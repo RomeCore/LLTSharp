@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp.TemplateNodes
 {
@@ -26,9 +25,9 @@ namespace LLTSharp.TemplateNodes
 			Children = children?.ToArray() ?? throw new ArgumentNullException(nameof(children));
 		}
 
-		public override IEnumerable<ChatMessage> Render(TemplateContextAccessor context)
+		public override IEnumerable<Message> Render(TemplateContextAccessor context)
 		{
-			List<ChatMessage> messages = new List<ChatMessage>();
+			List<Message> messages = new List<Message>();
 			foreach (var child in Children)
 			{
 				messages.AddRange(child.Render(context));

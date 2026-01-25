@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using LLTSharp.Metadata;
-using Microsoft.Extensions.AI;
 
 namespace LLTSharp
 {
 	/// <summary>
-	/// Interface for a template that can be used to generate prompts.
+	/// Interface for a template that can be used to generate contents.
 	/// </summary>
 	public interface ITemplate
 	{
@@ -25,7 +22,7 @@ namespace LLTSharp
 	}
 	
 	/// <summary>
-	/// Interface for a template that can be used to generate prompts.
+	/// Interface for a template that can be used to generate content.
 	/// </summary>
 	/// <typeparam name="TResult">The type of result produced by the template.</typeparam>
 	public interface ITemplate<TResult> : ITemplate
@@ -35,16 +32,16 @@ namespace LLTSharp
 	}
 
 	/// <summary>
-	/// Represents a prompt template that produces a string result.
+	/// Represents a text template that produces a string result.
 	/// </summary>
-	public interface IPromptTemplate : ITemplate<string>
+	public interface ITextTemplate : ITemplate<string>
 	{
 	}
 
 	/// <summary>
 	/// Represents a messages template that produces a collection of messages.
 	/// </summary>
-	public interface IMessagesTemplate : ITemplate<IEnumerable<ChatMessage>>
+	public interface IMessagesTemplate : ITemplate<IEnumerable<Message>>
 	{
 	}
 }
