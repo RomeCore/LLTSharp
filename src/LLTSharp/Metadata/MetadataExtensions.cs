@@ -26,5 +26,18 @@ namespace LLTSharp.Metadata
 		{
 			return new MetadataCollection(enumerable.Cast<IMetadata>());
 		}
+
+		public static T? TryGetAdditional<T>(this IMetadataCollection collection, string key)
+		{
+			foreach (var metadata in collection.GetAll<IAdditionalMetadata>())
+			{
+				if (metadata.TryGet<T>(key, out var result))
+				{
+					return result;
+				}
+			}
+
+			return default;
+		}
 	}
 }

@@ -699,6 +699,7 @@ namespace LLTSharp
 				{
 					var obj = v.GetValue<TemplateDictionaryAccessor>(2);
 					var metadata = new List<IMetadata>();
+					var additionalMetadata = new AdditionalMetadata();
 
 					foreach (var pair in obj.Dictionary)
 					{
@@ -717,10 +718,13 @@ namespace LLTSharp
 								metadata.Add(new VersionMetadata((int)((double)pair.Value.GetValue())));
 								break;
 							default:
-								metadata.Add(new AdditionalMetadata(pair.Key, pair.Value.GetValue()));
+								additionalMetadata.Set(pair.Key, pair.Value.GetValue());
 								break;
 						}
 					}
+
+					if (additionalMetadata.Count > 0)
+						metadata.Add(additionalMetadata.ToImmutable());
 
 					return new MetadataCollection(metadata);
 				});
