@@ -5,7 +5,7 @@ using LLTSharp.Metadata;
 
 namespace LLTSharp
 {
-	public class PlaintextTemplate : ITemplate
+	public class PlaintextTemplate : ITextTemplate
 	{
 		/// <summary>
 		/// The content of the template.
@@ -49,9 +49,14 @@ namespace LLTSharp
 			Metadata = new MetadataCollection(metadata) ?? throw new ArgumentNullException(nameof(metadata));
 		}
 
-		public object Render(object? context = null)
+		public string Render(object? context = null)
 		{
 			return Content;
+		}
+
+		object ITemplate.Render(object? context)
+		{
+			return Render(context);
 		}
 	}
 }
