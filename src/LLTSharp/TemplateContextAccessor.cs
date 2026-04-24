@@ -209,16 +209,20 @@ namespace LLTSharp
 		/// Renders a template with the specified identifier and optional new context.
 		/// </summary>
 		/// <remarks>
-		/// Tries to find the specified template in the local library. If not found, tries to find it in the shared library.
+		/// Tries to find the specified template in the context variables, then local library. If not found, tries to find it in the shared library.
 		/// </remarks>
 		/// <param name="identifier">The identifier of the template to render.</param>
 		/// <param name="newContext">The new context to use for rendering the template. If null, uses the current context.</param>
 		/// <returns>The rendered template as a string.</returns>
 		public string RenderTemplate(string identifier, TemplateDataAccessor? newContext)
 		{
-			var template = Library.TryRetrieve(identifier);
+			ITemplate? template = null;
+			if (Context.HasProperty(identifier) && Context.Property(identifier).GetValue() is ITemplate ctxValueTemplate)
+				template = ctxValueTemplate;
 			if (template == null)
-				template = TemplateLibrary.Shared.TryRetrieve(identifier); // try to get from shared library
+				template = Library.TryRetrieve(identifier);
+			if (template == null)
+				template = TemplateLibrary.Shared.TryRetrieve(identifier);
 			if (template == null)
 				throw new TemplateRuntimeException($"Template '{identifier}' not found.");
 
@@ -233,14 +237,18 @@ namespace LLTSharp
 		/// Renders a messages template with the specified identifier and optional new context.
 		/// </summary>
 		/// <remarks>
-		/// Tries to find the specified template in the local library. If not found, tries to find it in the shared library.
+		/// Tries to find the specified template in the context variables, then local library. If not found, tries to find it in the shared library.
 		/// </remarks>
 		/// <param name="identifier">The identifier of the messages template to render.</param>
 		/// <param name="newContext">The new context to use for rendering the template. If null, uses the current context.</param>
 		/// <returns>The rendered template as a collection of messages.</returns>
 		public IEnumerable<Message> RenderMessagesTemplate(string identifier, TemplateDataAccessor? newContext)
 		{
-			var template = Library.TryRetrieve(identifier);
+			ITemplate? template = null;
+			if (Context.HasProperty(identifier) && Context.Property(identifier).GetValue() is ITemplate ctxValueTemplate)
+				template = ctxValueTemplate;
+			if (template == null)
+				template = Library.TryRetrieve(identifier);
 			if (template == null)
 				template = TemplateLibrary.Shared.TryRetrieve(identifier);
 			if (template == null)

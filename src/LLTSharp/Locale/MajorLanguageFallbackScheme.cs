@@ -22,7 +22,7 @@ namespace LLTSharp.Locale
 			var hashSet = new HashSet<LanguageCode>(availableLanguages);
 			hashSet.IntersectWith(LanguageGroup.MajorWorldLanguages);
 
-			if (hashSet.Any())
+			if (hashSet.Count > 0)
 				return hashSet.First();
 
 			return availableLanguages.First();

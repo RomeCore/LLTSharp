@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LLTSharp.Metadata;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -13,7 +14,8 @@ namespace LLTSharp
 		/// Parses a prompt template string into a <see cref="ITemplate"/> objects.
 		/// </summary>
 		/// <param name="templateString">The prompt template string to parse.</param>
+		/// <param name="metadataFactories">Optional metadata factories to use for parsing.</param>
 		/// <returns>A collection of <see cref="ITemplate"/> objects representing the parsed templates.</returns>
-		IEnumerable<ITemplate> Parse(string templateString);
+		IEnumerable<ITemplate> Parse(string templateString, IEnumerable<MetadataFactory>? metadataFactories = null);
 	}
 }

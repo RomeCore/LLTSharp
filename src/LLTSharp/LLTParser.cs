@@ -20,6 +20,7 @@ namespace LLTSharp
 		private class LLTParsingContext
 		{
 			public TemplateLibrary LocalLibrary { get; set; }
+			public IEnumerable<MetadataFactory> MetadataFactories { get; set; }
 		}
 
 		private static readonly Parser _parser;
@@ -697,30 +698,23 @@ namespace LLTSharp
 				.Rule("constant_object")
 				.Transform(v =>
 				{
+					var ctx = v.GetParsingParameter<LLTParsingContext>();
+					var factories = ctx.MetadataFactories;
+
 					var obj = v.GetValue<TemplateDictionaryAccessor>(2);
 					var metadata = new List<IMetadata>();
 					var additionalMetadata = new AdditionalMetadata();
 
 					foreach (var pair in obj.Dictionary)
 					{
-						switch (pair.Key)
-						{
-							case "lang":
-								metadata.Add(new LanguageMetadata(new Locale.LanguageCode(pair.Value.ToString())));
+						IMetadata? result = null;
+						foreach (var factory in factories)
+							if (factory.TryCreateMetadata(pair.Key, pair.Value, out result))
 								break;
-							case "model":
-								metadata.Add(new TargetModelMetadata(pair.Value.ToString()));
-								break;
-							case "model_family":
-								metadata.Add(new TargetModelFamilyMetadata(pair.Value.ToString()));
-								break;
-							case "version":
-								metadata.Add(new VersionMetadata((int)((double)pair.Value.GetValue())));
-								break;
-							default:
-								additionalMetadata.Set(pair.Key, pair.Value.GetValue());
-								break;
-						}
+						if (result != null)
+							metadata.Add(result);
+						else
+							additionalMetadata.Set(pair.Key, pair.Value.GetValue());
 					}
 
 					if (additionalMetadata.Count > 0)
@@ -770,21 +764,13 @@ namespace LLTSharp
 			_parser = builder.Build();
 		}
 
-		public ParsedRuleResultBase ParseAST(string templateString)
+		public IEnumerable<ITemplate> Parse(string templateString, IEnumerable<MetadataFactory>? metadataFactories = null)
 		{
-			var ctx = new LLTParsingContext { LocalLibrary = new TemplateLibrary() };
-			return _parser.Parse(templateString, ctx);
-		}
-		
-		public ParsedRuleResultBase ParseOptimizedAST(string templateString)
-		{
-			var ctx = new LLTParsingContext { LocalLibrary = new TemplateLibrary() };
-			return _parser.Parse(templateString, ctx).Optimized(ParseTreeOptimization.Default);
-		}
-
-		public IEnumerable<ITemplate> Parse(string templateString)
-		{
-			var ctx = new LLTParsingContext { LocalLibrary = new TemplateLibrary() };
+			var ctx = new LLTParsingContext
+			{
+				LocalLibrary = new TemplateLibrary(),
+				MetadataFactories = metadataFactories?.ToList() ?? Enumerable.Empty<MetadataFactory>()
+			};
 			return _parser.Parse(templateString, ctx).GetValue<IEnumerable<ITemplate>>();
 		}
 	}

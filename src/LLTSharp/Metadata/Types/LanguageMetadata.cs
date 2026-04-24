@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using LLTSharp.Locale;
-using LLTSharp.Metadata;
 
-namespace LLTSharp.Metadata
+namespace LLTSharp.Metadata.Types
 {
 	/// <summary>
 	/// The metadata for language-related information.
