@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LLTSharp.Locale;
 using LLTSharp.Metadata;
+using LLTSharp.Metadata.Types;
 
 namespace LLTSharp.Tests
 {
@@ -33,7 +35,7 @@ namespace LLTSharp.Tests
 			{
 				@metadata
 				{
-					lang: 'en_US',
+					lang: 'en-US',
 					model: 'gpt-3.5-turbo'
 				}
 				This is another template for GPT-3.5-Turbo model.
@@ -43,7 +45,7 @@ namespace LLTSharp.Tests
 			{
 				@metadata
 				{
-					lang: 'en_US',
+					lang: 'en-US',
 					model: 'gpt-3.5-turbo'
 				}
 				This is template for GPT-3.5-Turbo model.
@@ -53,28 +55,30 @@ namespace LLTSharp.Tests
 			{
 				@metadata
 				{
-					lang: 'en_US',
+					lang: 'en-US',
 					model: 'gpt-4'
 				}
 				This is template for GPT-4 model.
 			}
 			""");
 
-			var template = lib.Retrieve("sample_template", new LanguageMetadata("en_US"), new TargetModelMetadata("gpt-3.5-turbo"));
+			var template = lib.Retrieve("sample_template", new LanguageMetadata("en-US"), new TargetModelMetadata("gpt-3.5-turbo"));
 			var rendered = template.Render();
 			Assert.Equal("This is template for GPT-3.5-Turbo model.", rendered);
 
-			template = lib.Retrieve("sample_template", new LanguageMetadata("en_US"), new TargetModelMetadata("gpt-4"));
+			template = lib.Retrieve("sample_template", new LanguageMetadata("en-US"), new TargetModelMetadata("gpt-4"));
 			rendered = template.Render();
 			Assert.Equal("This is template for GPT-4 model.", rendered);
 
-			Assert.Throws<KeyNotFoundException>(() => lib.Retrieve("sample_template", new LanguageMetadata("fr_FR")));
+			Assert.Throws<KeyNotFoundException>(() => lib.Retrieve("sample_template", new LanguageMetadata("fr-FR")));
 		}
 
 		[Fact]
 		public void TemplatePriorityByMetadataSpecificity()
 		{
 			var lib = new TemplateLibrary();
+
+			lib.SetLanguageFallbackScheme(new HierarchicalLanguageFallbackScheme());
 
 			lib.ImportFromString(
 			"""
@@ -111,6 +115,10 @@ namespace LLTSharp.Tests
 			// Less specific template, but still more specific than the general one.
 			var lessSpecific = lib.Retrieve("greeting", new LanguageMetadata("en"));
 			Assert.Equal("Hello!", lessSpecific.Render().ToString());
+
+			// Fallback to the most specific language-specific template
+			var lessSpecific2 = lib.RetrieveWithFallback("greeting", new LanguageMetadata("en-US"));
+			Assert.Equal("Hello!", lessSpecific2.Render().ToString());
 
 			// Most general template.
 			var generic = lib.Retrieve("greeting");

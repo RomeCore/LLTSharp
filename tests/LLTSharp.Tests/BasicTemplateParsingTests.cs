@@ -174,11 +174,7 @@ namespace LLTSharp.Tests
 			""";
 
 			var parser = new LLTParser();
-			var ast = parser.ParseAST(templateStr);
-			var ctx = ast.Context;
-			var value = ast.GetValue<IEnumerable<ITemplate>>();
-
-			output.WriteLine(ctx.walkTrace.Render(400));
+			parser.Parse(templateStr);
 		}
 	}
 }

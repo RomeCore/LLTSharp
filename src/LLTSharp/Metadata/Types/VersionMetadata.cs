@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace LLTSharp.Metadata
+namespace LLTSharp.Metadata.Types
 {
 	/// <summary>
 	/// Represents the version metadata.
@@ -12,7 +12,7 @@ namespace LLTSharp.Metadata
 		/// <summary>
 		/// Gets the version code associated with this metadata.
 		/// </summary>
-		public int Version { get; }
+		public Version Version { get; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="VersionMetadata"/> class with the specified version code.
@@ -20,7 +20,16 @@ namespace LLTSharp.Metadata
 		/// <param name="version">The version code associated with this metadata.</param>
 		public VersionMetadata(int version)
 		{
-			Version = version;
+			Version = new Version(version, 0);
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="VersionMetadata"/> class with the specified version code.
+		/// </summary>
+		/// <param name="version">The version code associated with this metadata.</param>
+		public VersionMetadata(Version version)
+		{
+			Version = version ?? throw new ArgumentNullException(nameof(version));
 		}
 
 		public override string ToString()

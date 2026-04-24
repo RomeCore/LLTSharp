@@ -54,6 +54,11 @@ namespace LLTSharp.DataAccessors
 			return accessors;
 		}
 
+		public override bool HasProperty(string name)
+		{
+			return _propertyAccessors.ContainsKey(name);
+		}
+
 		public override TemplateDataAccessor Property(string key)
 		{
 			if (_propertyAccessors.TryGetValue(key, out var accessor))

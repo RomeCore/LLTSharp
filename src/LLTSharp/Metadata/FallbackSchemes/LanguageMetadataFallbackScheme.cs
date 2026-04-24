@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LLTSharp.Locale;
+using LLTSharp.Metadata.Types;
 
-namespace LLTSharp.Metadata
+namespace LLTSharp.Metadata.FallbackSchemes
 {
 	/// <summary>
 	/// A fallback scheme for handling language metadata when no specific information is available.

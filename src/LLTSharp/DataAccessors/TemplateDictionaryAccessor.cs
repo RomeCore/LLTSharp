@@ -46,6 +46,11 @@ namespace LLTSharp.DataAccessors
 			return Property(index.ToString());
 		}
 
+		public override bool HasProperty(string name)
+		{
+			return _dictionary.ContainsKey(name);
+		}
+
 		public override TemplateDataAccessor Property(string key)
 		{
 			if (_dictionary.TryGetValue(key, out var accessor))

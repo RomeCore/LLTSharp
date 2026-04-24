@@ -1,6 +1,4 @@
-﻿using LLTSharp.Metadata;
-
-namespace LLTSharp.Metadata
+﻿namespace LLTSharp.Metadata.Types
 {
 	/// <summary>
 	/// The metadata for target model-related information.

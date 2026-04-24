@@ -6,13 +6,8 @@ namespace LLTSharp
 	/// <summary>
 	/// Interface for a template that can be used to generate contents.
 	/// </summary>
-	public interface ITemplate
+	public interface ITemplate : IMetadataProvider
 	{
-		/// <summary>
-		/// Gets the metadata associated with this template.
-		/// </summary>
-		public IMetadataCollection Metadata { get; }
-
 		/// <summary>
 		/// Renders the template with the given context.
 		/// </summary>

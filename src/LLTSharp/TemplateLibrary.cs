@@ -9,6 +9,9 @@ using System.Text;
 using System.Threading.Tasks;
 using LLTSharp.Locale;
 using LLTSharp.Metadata;
+using LLTSharp.Metadata.Factories;
+using LLTSharp.Metadata.FallbackSchemes;
+using LLTSharp.Metadata.Types;
 using RCParsing;
 
 namespace LLTSharp
@@ -28,7 +31,7 @@ namespace LLTSharp
 		/// <summary>
 		/// Registers a template parser for the specified language.
 		/// </summary>
-		/// <param name="languageCode">The language code of the template language.</param>
+		/// <param name="languageCode">The language code of the template language, e.g., "llt".</param>
 		/// <param name="parser">The template parser to register.</param>
 		/// <exception cref="ArgumentException">Thrown when a parser is already registered for the specified language code.</exception>
 		public static void RegisterParser(string languageCode, ITemplateParser parser)
@@ -46,13 +49,34 @@ namespace LLTSharp
 
 		private readonly Dictionary<Type, MetadataFallbackScheme> _fallbackSchemes = new();
 		private readonly Dictionary<Type, HashSet<IMetadata>> _fallbackMetadatas = new();
+		private readonly List<MetadataFactory> _metadataFactories = new()
+		{
+			new VersionMetadataFactory(),
+			new LanguageMetadataFactory(),
+			new TargetModelMetadataFactory(),
+			new TargetModelFamilyMetadataFactory()
+		};
 
-		private readonly object _lockObject = new object();
+		private readonly object _lockObject = new();
 
 		/// <summary>
 		/// Gets the shared template library instance.
 		/// </summary>
 		public static TemplateLibrary Shared { get; } = new();
+
+		/// <summary>
+		/// Gets the collection of metadata factories used by this template library.
+		/// These are used to construct metadata objects inside <see cref="ITemplate"/> metadata collections.
+		/// <para/>
+		/// The default metadata factories are:
+		/// <list type="bullet">
+		/// <item><see cref="VersionMetadataFactory"/></item>
+		/// <item><see cref="LanguageMetadataFactory"/></item>
+		/// <item><see cref="TargetModelMetadataFactory"/></item>
+		/// <item><see cref="TargetModelFamilyMetadataFactory"/></item>
+		/// </list>
+		/// </summary>
+		public List<MetadataFactory> MetadataFactories => _metadataFactories;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TemplateLibrary"/> class.
@@ -276,7 +300,7 @@ namespace LLTSharp
 			if (!_templateParsers.TryGetValue(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
-			var templates = parser.Parse(templateContents);
+			var templates = parser.Parse(templateContents, MetadataFactories);
 			foreach (var template in templates)
 				Add(template);
 		}
@@ -294,7 +318,7 @@ namespace LLTSharp
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = reader?.ReadToEnd() ?? throw new ArgumentNullException(nameof(reader));
-			var templates = parser.Parse(templateContents);
+			var templates = parser.Parse(templateContents, MetadataFactories);
 			foreach (var template in templates)
 				Add(template);
 		}
@@ -313,7 +337,7 @@ namespace LLTSharp
 
 			using var reader = new StreamReader(stream);
 			var templateContents = reader.ReadToEnd();
-			var templates = parser.Parse(templateContents);
+			var templates = parser.Parse(templateContents, MetadataFactories);
 			foreach (var template in templates)
 				Add(template);
 		}
@@ -340,7 +364,7 @@ namespace LLTSharp
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = File.ReadAllText(filename);
-			var templates = parser.Parse(templateContents);
+			var templates = parser.Parse(templateContents, MetadataFactories);
 			AddRange(templates);
 		}
 
@@ -357,7 +381,7 @@ namespace LLTSharp
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = File.ReadAllText(filename);
-			var templates = parser.Parse(templateContents);
+			var templates = parser.Parse(templateContents, MetadataFactories);
 			AddRange(templates);
 		}
 
@@ -393,7 +417,7 @@ namespace LLTSharp
 
 					try
 					{
-						var templates = parser.Parse(File.ReadAllText(file));
+						var templates = parser.Parse(File.ReadAllText(file), MetadataFactories);
 						AddRange(templates);
 					}
 					catch (ParsingException ex)
@@ -438,7 +462,7 @@ namespace LLTSharp
 						var stream = assembly.GetManifestResourceStream(resource);
 						using var reader = new StreamReader(stream);
 						var templateContents = reader.ReadToEnd();
-						var templates = parser.Parse(templateContents);
+						var templates = parser.Parse(templateContents, MetadataFactories);
 						AddRange(templates);
 					}
 					catch (ParsingException ex)

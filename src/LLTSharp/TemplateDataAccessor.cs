@@ -19,6 +19,13 @@ namespace LLTSharp
 		public virtual int Length => 0;
 
 		/// <summary>
+		/// Determines if a property exists in the data.
+		/// </summary>
+		/// <param name="name">The name of the property to check.</param>
+		/// <returns>True if the property exists; otherwise, false.</returns>
+		public virtual bool HasProperty(string name) => false;
+
+		/// <summary>
 		/// Gets the template data property associated with the specified property name.
 		/// </summary>
 		/// <param name="name">The property name to retrieve the template data for.</param>
