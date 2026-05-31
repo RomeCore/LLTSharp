@@ -12,8 +12,9 @@ namespace LLTSharp
 		/// Renders the template with the given context.
 		/// </summary>
 		/// <param name="context">The context to use for rendering the template. Can be null.</param>
+		/// <param name="functions">Optional set of functions to use during rendering. Can be null.</param>
 		/// <returns>The result of rendering the template.</returns>
-		object Render(object? context = null);
+		object Render(object? context = null, TemplateFunctionSet? functions = null);
 	}
 	
 	/// <summary>
@@ -22,8 +23,8 @@ namespace LLTSharp
 	/// <typeparam name="TResult">The type of result produced by the template.</typeparam>
 	public interface ITemplate<TResult> : ITemplate
 	{
-		/// <inheritdoc cref="ITemplate.Render(object?)"/>
-		new TResult Render(object? context = null);
+		/// <inheritdoc cref="ITemplate.Render(object?, TemplateFunctionSet?)"/>
+		new TResult Render(object? context = null, TemplateFunctionSet? functions = null);
 	}
 
 	/// <summary>
