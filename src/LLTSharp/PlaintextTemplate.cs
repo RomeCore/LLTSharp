@@ -49,14 +49,14 @@ namespace LLTSharp
 			Metadata = new MetadataCollection(metadata) ?? throw new ArgumentNullException(nameof(metadata));
 		}
 
-		public string Render(object? context = null)
+		public string Render(object? context = null, TemplateFunctionSet? functions = null)
 		{
 			return Content;
 		}
 
-		object ITemplate.Render(object? context)
+		object ITemplate.Render(object? context, TemplateFunctionSet? functions)
 		{
-			return Render(context);
+			return Render(context, functions);
 		}
 	}
 }

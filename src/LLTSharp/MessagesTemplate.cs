@@ -33,20 +33,15 @@ namespace LLTSharp
 			LocalLibrary = localLibrary ?? throw new ArgumentNullException(nameof(localLibrary));
 		}
 
-		/// <summary>
-		/// Renders the messages template using the provided data accessor.
-		/// </summary>
-		/// <param name="context">The context accessor to use for rendering.</param>
-		/// <returns>The rendered prompt as a collection of messages.</returns>
-		public IEnumerable<Message> Render(object? context = null)
+		public IEnumerable<Message> Render(object? context = null, TemplateFunctionSet? functions = null)
 		{
-			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, library: LocalLibrary);
+			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, functions: functions, library: LocalLibrary);
 			return _node.Render(ctx);
 		}
 
-		object ITemplate.Render(object? context)
+		object ITemplate.Render(object? context, TemplateFunctionSet? functions)
 		{
-			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, library: LocalLibrary);
+			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, functions: functions, library: LocalLibrary);
 			return _node.Render(ctx);
 		}
 	}
