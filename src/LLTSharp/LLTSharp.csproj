@@ -8,7 +8,7 @@
 
 	<PropertyGroup>
 		<PackageId>LLTSharp</PackageId>
-		<Version>1.2.4</Version>
+		<Version>1.3.0</Version>
 		<Authors>Roman K.</Authors>
 		<Company>RomeCore</Company>
 		<Product>LLTSharp</Product>
