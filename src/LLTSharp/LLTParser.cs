@@ -703,22 +703,20 @@ namespace LLTSharp
 
 					var obj = v.GetValue<TemplateDictionaryAccessor>(2);
 					var metadata = new List<IMetadata>();
-					var additionalMetadata = new AdditionalMetadata();
 
 					foreach (var pair in obj.Dictionary)
 					{
 						IMetadata? result = null;
+
 						foreach (var factory in factories)
 							if (factory.TryCreateMetadata(pair.Key, pair.Value, out result))
 								break;
+
 						if (result != null)
 							metadata.Add(result);
 						else
-							additionalMetadata.Set(pair.Key, pair.Value.GetValue());
+							metadata.Add(new AdditionalMetadata(pair.Key, pair.Value.GetValue()));
 					}
-
-					if (additionalMetadata.Count > 0)
-						metadata.Add(additionalMetadata.ToImmutable());
 
 					return new MetadataCollection(metadata);
 				});
