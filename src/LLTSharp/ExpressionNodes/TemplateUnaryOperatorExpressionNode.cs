@@ -38,6 +38,7 @@ namespace LLTSharp.ExpressionNodes
 			{
 				UnaryOperatorType.Negate => "-",
 				UnaryOperatorType.LogicalNot => "!",
+				UnaryOperatorType.LengthOf => "#",
 				_ => throw new ArgumentOutOfRangeException(nameof(type)),
 			};
 		}

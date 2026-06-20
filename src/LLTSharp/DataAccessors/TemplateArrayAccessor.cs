@@ -27,15 +27,15 @@ namespace LLTSharp.DataAccessors
 			_array = array?.ToArray() ?? throw new ArgumentNullException(nameof(array));
 		}
 
-		public override TemplateDataAccessor Index(TemplateDataAccessor index)
+		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
 		{
 			try
 			{
 				var i = Convert.ToInt32(index.GetValue());
 				if (i >= 0 && i < _array.Length)
-				{
 					return _array[i];
-				}
+				if (safe)
+					return TemplateNullAccessor.Instance;
 				throw new TemplateRuntimeException($"Index out of range: {index}, Length: {_array.Length}", dataAccessor: this);
 			}
 			catch (TemplateRuntimeException)

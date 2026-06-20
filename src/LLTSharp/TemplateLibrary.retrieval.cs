@@ -23,7 +23,7 @@ namespace LLTSharp
 						if (!_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
 							return false;
 
-						var fallbackMetadata = scheme.GetFallbackMetadata(metadata, fallbackMetadatas);
+						var fallbackMetadata = scheme.GetFallbackMetadata(metadata, fallbackMetadatas.Keys);
 						return _templates.TryGetValue(fallbackMetadata, out templates);
 					}
 				}

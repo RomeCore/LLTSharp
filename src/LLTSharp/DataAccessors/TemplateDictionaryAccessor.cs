@@ -41,9 +41,9 @@ namespace LLTSharp.DataAccessors
 			Dictionary = new ReadOnlyDictionary<string, TemplateDataAccessor>(_dictionary);
 		}
 
-		public override TemplateDataAccessor Index(TemplateDataAccessor index)
+		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
 		{
-			return Property(index.ToString());
+			return Property(index.ToString(), safe);
 		}
 
 		public override bool HasProperty(string name)
@@ -51,11 +51,11 @@ namespace LLTSharp.DataAccessors
 			return _dictionary.ContainsKey(name);
 		}
 
-		public override TemplateDataAccessor Property(string key)
+		public override TemplateDataAccessor Property(string key, bool safe)
 		{
 			if (_dictionary.TryGetValue(key, out var accessor))
 				return accessor;
-			return base.Property(key);
+			return base.Property(key, safe);
 		}
 
 		public override bool AsBoolean()

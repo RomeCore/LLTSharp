@@ -31,15 +31,15 @@ namespace LLTSharp.DataAccessors
 			return Value;
 		}
 
-		public override TemplateDataAccessor Index(TemplateDataAccessor index)
+		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
 		{
 			try
 			{
 				var i = Convert.ToInt32(index.GetValue());
 				if (i >= 0 && i < Value.Length)
-				{
 					return new TemplateStringAccessor(Value[i].ToString());
-				}
+				if (safe)
+					return new TemplateStringAccessor(string.Empty);
 				throw new TemplateRuntimeException($"Index out of range: {index}, Length: {Value.Length}", dataAccessor: this);
 			}
 			catch (TemplateRuntimeException)

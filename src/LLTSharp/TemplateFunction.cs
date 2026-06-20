@@ -13,40 +13,24 @@ namespace LLTSharp
 		/// <summary>
 		/// Gets the name of the function.
 		/// </summary>
-		public string? Name { get; }
+		public string Name { get; }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="TemplateFunction"/> class.
+		/// Gets a value indicating whether the function can be used as a method.
 		/// </summary>
-		/// <param name="function">The function to be called.</param>
-		/// <exception cref="ArgumentNullException"></exception>
-		public TemplateFunction(Func<TemplateDataAccessor, TemplateDataAccessor[], TemplateDataAccessor> function)
-		{
-			Name = null;
-			_function = function ?? throw new ArgumentNullException(nameof(function));
-		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="TemplateFunction"/> class.
-		/// </summary>
-		/// <param name="function">The function to be called.</param>
-		/// <exception cref="ArgumentNullException"></exception>
-		public TemplateFunction(Func<TemplateDataAccessor, TemplateDataAccessor[], object> function)
-		{
-			Name = null;
-			if (function == null) throw new ArgumentNullException(nameof(function));
-			_function = (self, args) => TemplateDataAccessor.Create(function(self, args));
-		}
+		public bool CanBeMethod { get; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TemplateFunction"/> class.
 		/// </summary>
 		/// <param name="name">The name of the function.</param>
 		/// <param name="function">The function to be called.</param>
+		/// <param name="canBeMethod">Whether the function can be used as a method.</param>
 		/// <exception cref="ArgumentNullException"></exception>
-		public TemplateFunction(string? name, Func<TemplateDataAccessor, TemplateDataAccessor[], TemplateDataAccessor> function)
+		public TemplateFunction(string? name, Func<TemplateDataAccessor, TemplateDataAccessor[], TemplateDataAccessor> function, bool canBeMethod = false)
 		{
 			Name = name;
+			CanBeMethod = canBeMethod;
 			_function = function ?? throw new ArgumentNullException(nameof(function));
 		}
 
@@ -55,10 +39,12 @@ namespace LLTSharp
 		/// </summary>
 		/// <param name="name">The name of the function.</param>
 		/// <param name="function">The function to be called.</param>
+		/// <param name="canBeMethod">Whether the function can be used as a method.</param>
 		/// <exception cref="ArgumentNullException"></exception>
-		public TemplateFunction(string? name, Func<TemplateDataAccessor, TemplateDataAccessor[], object> function)
+		public TemplateFunction(string? name, Func<TemplateDataAccessor, TemplateDataAccessor[], object> function, bool canBeMethod = false)
 		{
 			Name = name;
+			CanBeMethod = canBeMethod;
 			if (function == null) throw new ArgumentNullException(nameof(function));
 			_function = (self, args) => TemplateDataAccessor.Create(function(self, args));
 		}

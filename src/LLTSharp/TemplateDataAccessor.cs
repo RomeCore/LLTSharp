@@ -29,26 +29,33 @@ namespace LLTSharp
 		/// Gets the template data property associated with the specified property name.
 		/// </summary>
 		/// <param name="name">The property name to retrieve the template data for.</param>
+		/// <param name="safe">Indicates whether to return a null accessor if the property does not exist.</param>
 		/// <returns>The template data that is associated with the specified property name.</returns>
-		public virtual TemplateDataAccessor Property(string name) =>
-			throw new TemplateRuntimeException($"Cannot get value for key '{name}'");
+		public virtual TemplateDataAccessor Property(string name, bool safe) =>
+			safe ? TemplateNullAccessor.Instance :
+				throw new TemplateRuntimeException($"Cannot get value for key '{name}'", this);
 
 		/// <summary>
 		/// Gets the template data associated with the specified index.
 		/// </summary>
 		/// <param name="index">The index to retrieve the template data for.</param>
+		/// <param name="safe">Indicates whether to return a null accessor if the index does not exist.</param>
 		/// <returns>The template data that is at the specified index.</returns>
-		public virtual TemplateDataAccessor Index(TemplateDataAccessor index) =>
-			throw new TemplateRuntimeException("Indexing not supported.");
+		public virtual TemplateDataAccessor Index(TemplateDataAccessor index, bool safe) =>
+			safe ? TemplateNullAccessor.Instance :
+				throw new TemplateRuntimeException($"Cannot get value for index '{index}'.", this);
 
 		/// <summary>
 		/// Calls a method or function on the current data.
 		/// </summary>
 		/// <param name="methodName">The name of the method to call.</param>
+		/// <param name="safe">Indicates whether to return a null accessor if the method does not exist.</param>
 		/// <param name="arguments">The arguments to pass to the method.</param>
 		/// <returns>The result of the method call.</returns>
-		public virtual TemplateDataAccessor Call(string methodName, TemplateDataAccessor[] arguments)
+		public virtual TemplateDataAccessor Call(string methodName, bool safe, TemplateDataAccessor[] arguments)
 		{
+			if (safe)
+				return TemplateNullAccessor.Instance;
 			throw new TemplateRuntimeException(
 				$"Method '{methodName}' is not supported on type '{GetType().Name}'",
 				dataAccessor: this);
@@ -68,6 +75,9 @@ namespace LLTSharp
 
 				case UnaryOperatorType.LogicalNot:
 					return new TemplateBooleanAccessor(!AsBoolean());
+
+				case UnaryOperatorType.LengthOf:
+					return new TemplateNumberAccessor(Length);
 
 				default:
 					throw new TemplateRuntimeException("Invalid operator type.", dataAccessor: this);
@@ -107,6 +117,9 @@ namespace LLTSharp
 				case BinaryOperatorType.LogicalOr:
 					return new TemplateBooleanAccessor(AsBoolean() || other.AsBoolean());
 
+				case BinaryOperatorType.Coalesce:
+					return this is TemplateNullAccessor ? other : this;
+
 				default:
 					throw new TemplateRuntimeException("Invalid operator type.", dataAccessor: this);
 			}
@@ -130,6 +143,10 @@ namespace LLTSharp
 		/// <param name="format">The format to use for converting the template data, or <see langword="null"/> to use the default format.</param>
 		/// <returns>A string representing the template data.</returns>
 		public abstract string ToString(string? format = null);
+		public override string ToString()
+		{
+			return ToString(null);
+		}
 
 		private bool isDisposed;
 		protected virtual void Dispose(bool disposing)
