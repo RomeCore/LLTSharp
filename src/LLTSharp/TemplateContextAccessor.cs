@@ -173,7 +173,7 @@ namespace LLTSharp
 			throw new TemplateRuntimeException("Variable not found: " + variable, dataAccessor: this);
 		}
 
-		public override TemplateDataAccessor Property(string key)
+		public override TemplateDataAccessor Property(string key, bool safe)
 		{
 			foreach (var frame in _frames)
 			{
@@ -182,10 +182,10 @@ namespace LLTSharp
 					return data;
 			}
 
-			return Context.Property(key);
+			return Context.Property(key, safe);
 		}
 
-		public override TemplateDataAccessor Call(string methodName, TemplateDataAccessor[] arguments)
+		public override TemplateDataAccessor Call(string methodName, bool safe, TemplateDataAccessor[] arguments)
 		{
 			return Functions.CallFunction(methodName, this, arguments);
 		}
@@ -217,7 +217,7 @@ namespace LLTSharp
 		public string RenderTemplate(string identifier, TemplateDataAccessor? newContext)
 		{
 			ITemplate? template = null;
-			if (Context.HasProperty(identifier) && Context.Property(identifier).GetValue() is ITemplate ctxValueTemplate)
+			if (Context.HasProperty(identifier) && Context.Property(identifier, safe: false).GetValue() is ITemplate ctxValueTemplate)
 				template = ctxValueTemplate;
 			if (template == null)
 				template = Library.TryRetrieve(identifier);
@@ -245,7 +245,7 @@ namespace LLTSharp
 		public IEnumerable<Message> RenderMessagesTemplate(string identifier, TemplateDataAccessor? newContext)
 		{
 			ITemplate? template = null;
-			if (Context.HasProperty(identifier) && Context.Property(identifier).GetValue() is ITemplate ctxValueTemplate)
+			if (Context.HasProperty(identifier) && Context.Property(identifier, safe: false).GetValue() is ITemplate ctxValueTemplate)
 				template = ctxValueTemplate;
 			if (template == null)
 				template = Library.TryRetrieve(identifier);

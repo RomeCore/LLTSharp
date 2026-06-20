@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LLTSharp.DataAccessors;
 
 namespace LLTSharp.ExpressionNodes
 {
@@ -20,6 +21,11 @@ namespace LLTSharp.ExpressionNodes
 		public string MethodName { get; }
 
 		/// <summary>
+		/// Whether to return <see cref="TemplateNullAccessor"/> instead of exception if method does not exist.
+		/// </summary>
+		public bool SafeMode { get; }
+
+		/// <summary>
 		/// The arguments to the method call expression node.
 		/// </summary>
 		public IReadOnlyList<TemplateExpressionNode> Arguments { get; }
@@ -29,20 +35,26 @@ namespace LLTSharp.ExpressionNodes
 		/// </summary>
 		/// <param name="child">The child expression node that is passed as caller to the method.</param>
 		/// <param name="methodName">The name of the method to be called.</param>
+		/// <param name="safe">Whether to return <see cref="TemplateNullAccessor"/> instead of exception if method does not exist.</param>
 		/// <param name="arguments">The arguments to the method call expression node.</param>
 		/// <exception cref="ArgumentNullException">Thrown when the <paramref name="child"/> parameter is null.</exception>
 		/// <exception cref="ArgumentException">Thrown when the <paramref name="methodName"/> parameter is null or empty.</exception>
-		public TemplateMethodCallExpressionNode(TemplateExpressionNode child, string methodName, IEnumerable<TemplateExpressionNode> arguments)
+		public TemplateMethodCallExpressionNode(TemplateExpressionNode child, string methodName, bool safe, IEnumerable<TemplateExpressionNode> arguments)
 		{
 			Child = child ?? throw new ArgumentNullException(nameof(child));
 			MethodName = string.IsNullOrEmpty(methodName) ? throw new ArgumentException("Method name cannot be null or empty.", nameof(methodName)) : methodName;
+			SafeMode = safe;
 			Arguments = arguments.ToArray();
 		}
 
 		public override TemplateDataAccessor Evaluate(TemplateContextAccessor context)
 		{
 			var child = Child.Evaluate(context);
-			return child.Call(MethodName, Arguments.Select(arg => arg.Evaluate(context)).ToArray());
+
+			var function = context.Functions.TryGetFunction(MethodName);
+			if (function != null && function.CanBeMethod)
+				return function.Call(child, Arguments.Select(arg => arg.Evaluate(context)).ToArray());
+			return child.Call(MethodName, SafeMode, Arguments.Select(arg => arg.Evaluate(context)).ToArray());
 		}
 
 		public override string ToString()

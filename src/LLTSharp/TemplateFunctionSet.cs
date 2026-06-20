@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using LLTSharp.DataAccessors;
 
 namespace LLTSharp
 {
 	/// <summary>
 	/// A set of functions that can be called inside a template.
 	/// </summary>
-	public class TemplateFunctionSet
+	public class TemplateFunctionSet : IEnumerable<TemplateFunction>
 	{
 		private Dictionary<string, TemplateFunction> _functions;
 
@@ -33,13 +35,13 @@ namespace LLTSharp
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="TemplateFunctionSet"/> class.
+		/// Determines whether a function with the specified name exists in this set.
 		/// </summary>
-		/// <param name="functions">A dictionary of function names and their corresponding implementations.</param>
-		/// <exception cref="ArgumentNullException">Thrown when the <paramref name="functions"/> parameter is null.</exception>
-		public TemplateFunctionSet(IDictionary<string, TemplateFunction> functions)
+		/// <param name="functionName">The name of the function to check.</param>
+		/// <returns><see langword="true"/> if a function with the specified name exists in this set; otherwise, <see langword="false"/>.</returns>
+		public bool Exists(string functionName)
 		{
-			_functions = functions?.ToDictionary(k => k.Key, v => v.Value) ?? throw new ArgumentNullException(nameof(functions));
+			return _functions.ContainsKey(functionName);
 		}
 
 		/// <summary>
@@ -88,7 +90,17 @@ namespace LLTSharp
 		public TemplateDataAccessor CallFunction(string functionName, TemplateDataAccessor? self, TemplateDataAccessor[] args)
 		{
 			var function = GetFunction(functionName);
-			return function.Call(self, args);
+			return function?.Call(self, args) ?? TemplateNullAccessor.Instance;
+		}
+
+		public IEnumerator<TemplateFunction> GetEnumerator()
+		{
+			return _functions.Values.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 
 		/// <summary>

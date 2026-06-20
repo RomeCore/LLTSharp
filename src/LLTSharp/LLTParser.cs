@@ -106,6 +106,7 @@ namespace LLTSharp
 
 			builder.CreateRule("function_access")
 				.Identifier()
+				.Optional(b => b.Literal('?'))
 				.Literal('(')
 				.ZeroOrMoreSeparated(b => b
 					.Rule("expression"), b => b.Literal(','))
@@ -113,20 +114,20 @@ namespace LLTSharp
 				.Transform(v =>
 				{
 					var functionName = v.Children[0].Text;
-					var arguments = v.Children[2].SelectValues<TemplateExpressionNode>();
+					var arguments = v.Children[3].SelectValues<TemplateExpressionNode>();
+					var safe = v.Children[1].Length > 0;
 					return new TemplateMethodCallExpressionNode(new TemplateContextAccessExpressionNode(),
-						functionName, arguments);
+						functionName, safe, arguments);
 				});
 
 			builder.CreateRule("context_access")
 				.Choice(
-					b => b
-						.Literal("ctx")
+					b => b.Literal("ctx")
 							.Transform(_ => new TemplateContextAccessExpressionNode()),
-					b => b
-						.Identifier()
+					b => b.Optional(b => b.Literal('?'))
+						  .Identifier()
 							.Transform(v => new TemplatePropertyExpressionNode(
-								new TemplateContextAccessExpressionNode(), v.Text)));
+								new TemplateContextAccessExpressionNode(), v[1].Text, v[0].Length > 0)));
 
 			builder.CreateRule("primary")
 				.Choice(
@@ -152,16 +153,19 @@ namespace LLTSharp
 			builder.CreateRule("postfix_member")
 				.Rule("primary")
 				.ZeroOrMore(b => b.Choice(
-					b => b.Literal('.') // Method call
+					b => b.Optional(b => b.Literal('?')) // Method call
+						  .Literal('.')
 						  .Token("method_name")
 						  .Literal('(')
 						  .ZeroOrMoreSeparated(a => a.Rule("expression"), s => s.Literal(','))
 						  .Literal(')'),
 
-					b => b.Literal('.') // Field access
+					b => b.Optional(b => b.Literal('?')) // Field access
+						  .Literal('.')
 						  .Token("field_name"),
 
-					b => b.Literal('[') // Index access
+					b => b.Optional(b => b.Literal('?')) // Index access
+						  .Literal('[')
 						  .Rule("expression")
 						  .Literal(']')
 					))
@@ -172,27 +176,28 @@ namespace LLTSharp
 					foreach (var _member in v.Children[1])
 					{
 						var member = _member.Children[0];
+						var safe = member.Children[0].Length > 0;
 						switch (member.Result.occurency)
 						{
 							case 0:
 
 								target = new TemplateMethodCallExpressionNode(target,
-									member.GetValue<string>(1),
-									member.Children[3].SelectValues<TemplateExpressionNode>());
+									member.GetValue<string>(2), safe,
+									member.Children[4].SelectValues<TemplateExpressionNode>());
 
 								break;
 
 							case 1:
 
 								target = new TemplatePropertyExpressionNode(target,
-									member.GetValue<string>(1));
+									member.GetValue<string>(2), safe);
 
 								break;
 
 							case 2:
 
 								target = new TemplateIndexExpressionNode(target,
-									member.GetValue<TemplateExpressionNode>(1));
+									member.GetValue<TemplateExpressionNode>(2), safe);
 
 								break;
 						}
@@ -202,7 +207,7 @@ namespace LLTSharp
 				});
 
 			builder.CreateRule("prefix_operator")
-				.ZeroOrMore(b => b.LiteralChoice("+", "-", "!"))
+				.ZeroOrMore(b => b.LiteralChoice("+", "-", "!", "#"))
 				.Rule("postfix_member")
 				.Transform(v =>
 				{
@@ -222,6 +227,9 @@ namespace LLTSharp
 							case "!":
 								target = new TemplateUnaryOperatorExpressionNode(UnaryOperatorType.LogicalNot, target);
 								break;
+							case "#":
+								target = new TemplateUnaryOperatorExpressionNode(UnaryOperatorType.LengthOf, target);
+								break;
 						}
 					}
 
@@ -236,12 +244,15 @@ namespace LLTSharp
 			static object? OperatorFactory(ParsedRuleResultBase result)
 			{
 				var children = result.Children;
-				var target = children[0].GetValue<TemplateExpressionNode>();
+				var left = children[0].GetValue<TemplateExpressionNode>();
 
 				for (int i = 1; i < children.Count; i += 2)
 				{
 					var right = children[i + 1].GetValue<TemplateExpressionNode>();
 					var opStr = children[i].GetIntermediateValue<string>();
+
+					if (opStr is "?:")
+						return new TemplateHasPropertyExpressionNode(left, right);
 
 					var op = opStr switch
 					{
@@ -258,13 +269,14 @@ namespace LLTSharp
 						"!=" => BinaryOperatorType.NotEqual,
 						"&&" => BinaryOperatorType.LogicalAnd,
 						"||" => BinaryOperatorType.LogicalOr,
+						"??" => BinaryOperatorType.Coalesce,
 						_ => throw new InvalidOperationException($"Unknown operator '{opStr}'"),
 					};
 
-					target = new TemplateBinaryOperatorExpressionNode(op, target, right);
+					left = new TemplateBinaryOperatorExpressionNode(op, left, right);
 				}
 
-				return target;
+				return left;
 			}
 
 			builder.CreateRule("multiplicative_operator") // multiplicative
@@ -285,8 +297,14 @@ namespace LLTSharp
 					includeSeparatorsInResult: true)
 				.Transform(OperatorFactory);
 
-			builder.CreateRule("equality_operator") // equality (==, !=)
+			builder.CreateRule("has_operator") // has (?:)
 				.OneOrMoreSeparated(b => b.Rule("relational_operator"),
+					o => o.Literal("?:"),
+					includeSeparatorsInResult: true)
+				.Transform(OperatorFactory);
+
+			builder.CreateRule("equality_operator") // equality (==, !=)
+				.OneOrMoreSeparated(b => b.Rule("has_operator"),
 					o => o.LiteralChoice("==", "!="),
 					includeSeparatorsInResult: true)
 				.Transform(OperatorFactory);
@@ -303,8 +321,14 @@ namespace LLTSharp
 					includeSeparatorsInResult: true)
 				.Transform(OperatorFactory);
 
+			builder.CreateRule("coalesce_operator") // coalesce (??)
+				.OneOrMoreSeparated(b => b.Rule("logical_or_operator"),
+					o => o.Literal("??"),
+					includeSeparatorsInResult: true)
+				.Transform(OperatorFactory);
+
 			builder.CreateRule("ternary_operator") // ternary (? :)
-				.Rule("logical_or_operator")
+				.Rule("coalesce_operator")
 				.Optional(b => b
 					.Literal('?')
 					.Rule("expression")

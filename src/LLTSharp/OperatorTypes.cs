@@ -6,7 +6,8 @@
 	public enum UnaryOperatorType
 	{
 		Negate,
-		LogicalNot
+		LogicalNot,
+		LengthOf
 	}
 
 	/// <summary>
@@ -26,6 +27,7 @@
 		Equal,
 		NotEqual,
 		LogicalAnd,
-		LogicalOr
+		LogicalOr,
+		Coalesce
 	}
 }

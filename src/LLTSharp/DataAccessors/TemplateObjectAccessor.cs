@@ -59,7 +59,7 @@ namespace LLTSharp.DataAccessors
 			return _propertyAccessors.ContainsKey(name);
 		}
 
-		public override TemplateDataAccessor Property(string key)
+		public override TemplateDataAccessor Property(string key, bool safe)
 		{
 			if (_propertyAccessors.TryGetValue(key, out var accessor))
 			{
@@ -70,6 +70,8 @@ namespace LLTSharp.DataAccessors
 				}
 				catch (Exception ex)
 				{
+					if (safe)
+						return TemplateNullAccessor.Instance;
 					throw new TemplateRuntimeException(
 						$"Error accessing property '{key}' on {_target.GetType().Name}",
 						ex,
@@ -77,7 +79,7 @@ namespace LLTSharp.DataAccessors
 				}
 			}
 
-			return base.Property(key);
+			return base.Property(key, safe);
 		}
 
 		public override bool AsBoolean() => true;

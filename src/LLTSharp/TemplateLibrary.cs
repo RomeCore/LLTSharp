@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,11 +22,11 @@ namespace LLTSharp
 	/// </summary>
 	public partial class TemplateLibrary : IEnumerable<ITemplate>
 	{
-		private static readonly ConcurrentDictionary<string, ITemplateParser> _templateParsers = new();
+		private static readonly ConcurrentDictionary<string, ITemplateParser> _sharedTemplateParsers = new();
 
 		static TemplateLibrary()
 		{
-			_templateParsers.TryAdd("llt", new LLTParser());
+			_sharedTemplateParsers.TryAdd("llt", new LLTParser());
 		}
 
 		/// <summary>
@@ -34,21 +35,33 @@ namespace LLTSharp
 		/// <param name="languageCode">The language code of the template language, e.g., "llt".</param>
 		/// <param name="parser">The template parser to register.</param>
 		/// <exception cref="ArgumentException">Thrown when a parser is already registered for the specified language code.</exception>
-		public static void RegisterParser(string languageCode, ITemplateParser parser)
+		public static void RegisterSharedParser(string languageCode, ITemplateParser parser)
 		{
 			languageCode = languageCode.ToLowerInvariant();
-			if (_templateParsers.ContainsKey(languageCode))
+			if (_sharedTemplateParsers.ContainsKey(languageCode))
 				throw new ArgumentException($"Parser already registered for language: '{languageCode}'");
-			_templateParsers.TryAdd(languageCode, parser);
+			_sharedTemplateParsers.TryAdd(languageCode, parser);
+		}
+
+		/// <summary>
+		/// Removes a template parser for the specified language.
+		/// </summary>
+		/// <param name="languageCode">The language code of the template language to remove, e.g., "llt".</param>
+		/// <returns>True if the parser was successfully removed; otherwise, false.</returns>
+		public static bool RemoveSharedParser(string languageCode)
+		{
+			languageCode = languageCode.ToLowerInvariant();
+			return _sharedTemplateParsers.TryRemove(languageCode, out _);
 		}
 
 
 
+		private readonly ConcurrentDictionary<string, ITemplateParser> _instanceTemplateParsers = new();
 		private readonly Dictionary<IMetadata, List<ITemplate>> _templates = new();
 		private readonly HashSet<ITemplate> _allTemplates = new();
 
 		private readonly Dictionary<Type, MetadataFallbackScheme> _fallbackSchemes = new();
-		private readonly Dictionary<Type, HashSet<IMetadata>> _fallbackMetadatas = new();
+		private readonly Dictionary<Type, Dictionary<IMetadata, int>> _fallbackMetadatas = new();
 		private readonly List<MetadataFactory> _metadataFactories = new()
 		{
 			new VersionMetadataFactory(),
@@ -104,6 +117,31 @@ namespace LLTSharp
 		}
 
 		/// <summary>
+		/// Registers a template parser for the specified language.
+		/// </summary>
+		/// <param name="languageCode">The language code of the template language, e.g., "llt".</param>
+		/// <param name="parser">The template parser to register.</param>
+		/// <exception cref="ArgumentException">Thrown when a parser is already registered for the specified language code.</exception>
+		public void RegisterParser(string languageCode, ITemplateParser parser)
+		{
+			languageCode = languageCode.ToLowerInvariant();
+			if (_instanceTemplateParsers.ContainsKey(languageCode))
+				throw new ArgumentException($"Parser already registered for language: '{languageCode}'");
+			_instanceTemplateParsers.TryAdd(languageCode, parser);
+		}
+
+		/// <summary>
+		/// Removes a template parser for the specified language.
+		/// </summary>
+		/// <param name="languageCode">The language code of the template language to remove, e.g., "llt".</param>
+		/// <returns>True if the parser was successfully removed; otherwise, false.</returns>
+		public bool RemoveParser(string languageCode)
+		{
+			languageCode = languageCode.ToLowerInvariant();
+			return _instanceTemplateParsers.TryRemove(languageCode, out _);
+		}
+
+		/// <summary>
 		/// Adds a template to the library and associates it with its metadata.
 		/// </summary>
 		/// <param name="template">The template to add. Cannot be <see langword="null"/>.</param>
@@ -124,8 +162,11 @@ namespace LLTSharp
 				{
 					var metadataType = metadata.GetType();
 					if (!_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
-						_fallbackMetadatas[metadataType] = fallbackMetadatas = new HashSet<IMetadata>();
-					fallbackMetadatas.Add(metadata);
+						_fallbackMetadatas[metadataType] = fallbackMetadatas = new Dictionary<IMetadata, int>();
+					if (fallbackMetadatas.TryGetValue(metadata, out var existingCount))
+						fallbackMetadatas[metadata] = existingCount + 1;
+					else
+						fallbackMetadatas[metadata] = 1;
 
 					if (!_templates.TryGetValue(metadata, out var templatesByMetadata))
 						_templates[metadata] = templatesByMetadata = new List<ITemplate>();
@@ -156,8 +197,11 @@ namespace LLTSharp
 				{
 					var metadataType = metadata.GetType();
 					if (!_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
-						_fallbackMetadatas[metadataType] = fallbackMetadatas = new HashSet<IMetadata>();
-					fallbackMetadatas.Add(metadata);
+						_fallbackMetadatas[metadataType] = fallbackMetadatas = new Dictionary<IMetadata, int>();
+					if (fallbackMetadatas.TryGetValue(metadata, out var existingCount))
+						fallbackMetadatas[metadata] = existingCount + 1;
+					else
+						fallbackMetadatas[metadata] = 1;
 
 					if (!_templates.TryGetValue(metadata, out var templatesByMetadata))
 						_templates[metadata] = templatesByMetadata = new List<ITemplate>();
@@ -167,8 +211,6 @@ namespace LLTSharp
 
 			return true;
 		}
-
-
 
 		/// <summary>
 		/// Adds a template to the library and associates it with its metadata.
@@ -184,6 +226,9 @@ namespace LLTSharp
 			lock (_lockObject)
 				foreach (var template in templates)
 				{
+					if (template == null)
+						continue;
+
 					if (!_allTemplates.Add(template))
 						throw new ArgumentException("Template already exists in the library.", nameof(template));
 
@@ -191,8 +236,11 @@ namespace LLTSharp
 					{
 						var metadataType = metadata.GetType();
 						if (!_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
-							_fallbackMetadatas[metadataType] = fallbackMetadatas = new HashSet<IMetadata>();
-						fallbackMetadatas.Add(metadata);
+							_fallbackMetadatas[metadataType] = fallbackMetadatas = new Dictionary<IMetadata, int>();
+						if (fallbackMetadatas.TryGetValue(metadata, out var existingCount))
+							fallbackMetadatas[metadata] = existingCount + 1;
+						else
+							fallbackMetadatas[metadata] = 1;
 
 						if (!_templates.TryGetValue(metadata, out var templatesByMetadata))
 							_templates[metadata] = templatesByMetadata = new List<ITemplate>();
@@ -206,7 +254,6 @@ namespace LLTSharp
 		/// </summary>
 		/// <param name="templates">The templates to add. Cannot be <see langword="null"/>.</param>
 		/// <exception cref="ArgumentNullException">Thrown if <paramref name="templates"/> is <see langword="null"/>.</exception>
-		/// <exception cref="ArgumentException">Thrown if a template exists in the library.</exception>
 		public void TryAddRange(IEnumerable<ITemplate> templates)
 		{
 			if (templates == null)
@@ -215,6 +262,9 @@ namespace LLTSharp
 			lock (_lockObject)
 				foreach (var template in templates)
 				{
+					if (template == null)
+						continue;
+
 					if (!_allTemplates.Add(template))
 						continue;
 
@@ -222,14 +272,115 @@ namespace LLTSharp
 					{
 						var metadataType = metadata.GetType();
 						if (!_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
-							_fallbackMetadatas[metadataType] = fallbackMetadatas = new HashSet<IMetadata>();
-						fallbackMetadatas.Add(metadata);
+							_fallbackMetadatas[metadataType] = fallbackMetadatas = new Dictionary<IMetadata, int>();
+						if (fallbackMetadatas.TryGetValue(metadata, out var existingCount))
+							fallbackMetadatas[metadata] = existingCount + 1;
+						else
+							fallbackMetadatas[metadata] = 1;
 
 						if (!_templates.TryGetValue(metadata, out var templatesByMetadata))
 							_templates[metadata] = templatesByMetadata = new List<ITemplate>();
 						templatesByMetadata.Add(template);
 					}
 				}
+		}
+
+		/// <summary>
+		/// Removes a template from the library.
+		/// </summary>
+		/// <param name="template">The template to remove. Cannot be <see langword="null"/>.</param>
+		/// <returns><see langword="true"/> if the template was removed; otherwise, <see langword="false"/>.</returns>
+		/// <exception cref="ArgumentNullException"></exception>
+		public bool Remove(ITemplate template)
+		{
+			if (template == null)
+				throw new ArgumentNullException(nameof(template));
+
+			lock (_lockObject)
+			{
+				if (!_allTemplates.Remove(template))
+					return false;
+
+				foreach (var metadata in template.Metadata)
+				{
+					var metadataType = metadata.GetType();
+					if (_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
+					{
+						if (fallbackMetadatas.TryGetValue(metadata, out var existingCount) && existingCount == 1)
+							fallbackMetadatas.Remove(metadata);
+						else
+							fallbackMetadatas[metadata] = existingCount - 1;
+						if (fallbackMetadatas.Count == 0)
+							_fallbackMetadatas.Remove(metadataType);
+					}
+
+					if (_templates.TryGetValue(metadata, out var templatesByMetadata))
+					{
+						templatesByMetadata.Remove(template);
+						if (templatesByMetadata.Count == 0)
+							_templates.Remove(metadata);
+					}
+				}
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// Removes a range of templates from the library.
+		/// </summary>
+		/// <param name="templates">The templates to remove. Cannot be <see langword="null"/>.</param>
+		/// <exception cref="ArgumentNullException"></exception>
+		public void RemoveRange(IEnumerable<ITemplate> templates)
+		{
+			if (templates == null)
+				throw new ArgumentNullException(nameof(templates));
+
+			lock (_lockObject)
+			{
+				foreach (var template in templates)
+				{
+					if (template == null)
+						continue;
+
+					if (!_allTemplates.Remove(template))
+						continue;
+
+					foreach (var metadata in template.Metadata)
+					{
+						var metadataType = metadata.GetType();
+						if (_fallbackMetadatas.TryGetValue(metadataType, out var fallbackMetadatas))
+						{
+							if (fallbackMetadatas.TryGetValue(metadata, out var existingCount) && existingCount == 1)
+								fallbackMetadatas.Remove(metadata);
+							else
+								fallbackMetadatas[metadata] = existingCount - 1;
+							if (fallbackMetadatas.Count == 0)
+								_fallbackMetadatas.Remove(metadataType);
+						}
+
+						if (_templates.TryGetValue(metadata, out var templatesByMetadata))
+						{
+							templatesByMetadata.Remove(template);
+							if (templatesByMetadata.Count == 0)
+								_templates.Remove(metadata);
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Clears all templates from the library.
+		/// </summary>
+		public void Clear()
+		{
+			lock (_lockObject)
+			{
+				_allTemplates.Clear();
+				_fallbackMetadatas.Clear();
+				_templates.Clear();
+			}
 		}
 
 		/// <summary>
@@ -288,6 +439,15 @@ namespace LLTSharp
 
 
 
+		private bool TryGetParser(string languageCode, out ITemplateParser parser)
+		{
+			if (_instanceTemplateParsers.TryGetValue(languageCode, out parser))
+				return true;
+			if (_sharedTemplateParsers.TryGetValue(languageCode, out parser))
+				return true;
+			return false;
+		}
+
 		/// <summary>
 		/// Imports a set of templates from the specified string contents.
 		/// </summary>
@@ -297,7 +457,7 @@ namespace LLTSharp
 		/// <exception cref="ParsingException">Thrown when the template contents cannot be parsed.</exception>
 		public void ImportFromString(string templateContents, string languageCode = "llt")
 		{
-			if (!_templateParsers.TryGetValue(languageCode, out var parser))
+			if (!TryGetParser(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templates = parser.Parse(templateContents, MetadataFactories);
@@ -314,7 +474,7 @@ namespace LLTSharp
 		/// <exception cref="ParsingException">Thrown when the template contents cannot be parsed.</exception>
 		public void ImportFromReader(TextReader reader, string languageCode = "llt")
 		{
-			if (!_templateParsers.TryGetValue(languageCode, out var parser))
+			if (!TryGetParser(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = reader?.ReadToEnd() ?? throw new ArgumentNullException(nameof(reader));
@@ -332,7 +492,7 @@ namespace LLTSharp
 		/// <exception cref="ParsingException">Thrown when the template contents cannot be parsed.</exception>
 		public void ImportFromStream(Stream stream, string languageCode = "llt")
 		{
-			if (!_templateParsers.TryGetValue(languageCode, out var parser))
+			if (!TryGetParser(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			using var reader = new StreamReader(stream);
@@ -360,7 +520,7 @@ namespace LLTSharp
 		public void ImportFromFile(string filename)
 		{
 			var languageCode = Path.GetExtension(filename)?.TrimStart('.')?.ToLowerInvariant() ?? "llt";
-			if (!_templateParsers.TryGetValue(languageCode, out var parser))
+			if (!TryGetParser(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = File.ReadAllText(filename);
@@ -377,7 +537,7 @@ namespace LLTSharp
 		/// <exception cref="ParsingException">Thrown when the template contents cannot be parsed.</exception>
 		public void ImportFromFile(string filename, string languageCode)
 		{
-			if (!_templateParsers.TryGetValue(languageCode, out var parser))
+			if (!TryGetParser(languageCode, out var parser))
 				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
 
 			var templateContents = File.ReadAllText(filename);
@@ -411,7 +571,7 @@ namespace LLTSharp
 			{
 				var languageCode = Path.GetExtension(file)?.TrimStart('.')?.ToLowerInvariant();
 
-				if (languageCode != null && _templateParsers.TryGetValue(languageCode, out var parser))
+				if (languageCode != null && TryGetParser(languageCode, out var parser))
 				{
 					ParsingException? _ex = null;
 
@@ -455,7 +615,7 @@ namespace LLTSharp
 					continue;
 
 				var languageCode = Path.GetExtension(resource)?.TrimStart('.')?.ToLowerInvariant();
-				if (_templateParsers.TryGetValue(languageCode, out var parser))
+				if (TryGetParser(languageCode, out var parser))
 				{
 					try
 					{
