@@ -31,7 +31,7 @@ namespace LLTSharp.Metadata
 		{
 			foreach (var metadata in collection.GetAll<IAdditionalMetadata>())
 				if (metadata.Key == key)
-					return (T)metadata.Value;
+					return (T)Convert.ChangeType(metadata.Value, typeof(T));
 
 			return default;
 		}
