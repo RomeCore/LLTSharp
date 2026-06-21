@@ -23,6 +23,8 @@ namespace LLTSharp.DataAccessors
 		/// </summary>
 		private TemplateNullAccessor() { }
 
+		public override string Type => "null";
+
 		public override bool AsBoolean()
 		{
 			return false;

@@ -10,6 +10,16 @@ namespace LLTSharp.DataAccessors
 	public class TemplateBooleanAccessor : TemplateDataAccessor
 	{
 		/// <summary>
+		/// Gets a singleton instance representing true.
+		/// </summary>
+		public static TemplateBooleanAccessor True { get; } = new TemplateBooleanAccessor(true);
+
+		/// <summary>
+		/// Gets a singleton instance representing false.
+		/// </summary>
+		public static TemplateBooleanAccessor False { get; } = new TemplateBooleanAccessor(false);
+
+		/// <summary>
 		/// Gets the value of the boolean accessor.
 		/// </summary>
 		public bool Value { get; }
@@ -21,6 +31,8 @@ namespace LLTSharp.DataAccessors
 		{
 			Value = value;
 		}
+
+		public override string Type => "boolean";
 
 		public override bool AsBoolean()
 		{
@@ -47,15 +59,16 @@ namespace LLTSharp.DataAccessors
 
 		public override TemplateDataAccessor Operator(UnaryOperatorType type)
 		{
-			switch (type)
+			return type switch
 			{
-				case UnaryOperatorType.Negate:
-				case UnaryOperatorType.LogicalNot:
-					return new TemplateBooleanAccessor(!AsBoolean());
+				UnaryOperatorType.Negate or UnaryOperatorType.LogicalNot => new TemplateBooleanAccessor(!AsBoolean()),
 
-				default:
-					throw new TemplateRuntimeException("Invalid operator type.", dataAccessor: this);
-			}
+				UnaryOperatorType.LengthOf => new TemplateNumberAccessor(Length),
+
+				_ => throw new TemplateRuntimeException(
+					$"Unary operator '{type}' is not valid for boolean values",
+					dataAccessor: this)
+			};
 		}
 
 		public override TemplateDataAccessor Operator(TemplateDataAccessor other, BinaryOperatorType type)
@@ -84,6 +97,8 @@ namespace LLTSharp.DataAccessors
 				BinaryOperatorType.GreaterThanOrEqual =>
 					throw new TemplateRuntimeException(
 						$"Comparison operator '{type}' is not valid for boolean values"),
+
+				BinaryOperatorType.Coalesce => this,
 
 				_ => throw new TemplateRuntimeException(
 						$"Unknown operator type: {type}")

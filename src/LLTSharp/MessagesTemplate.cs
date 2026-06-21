@@ -10,7 +10,10 @@ namespace LLTSharp
 	/// </summary>
 	public class MessagesTemplate : IMessagesTemplate
 	{
-		private readonly MessagesTemplateNode _node;
+		/// <summary>
+		/// The main node of the prompt template. This is where the actual messages are defined.
+		/// </summary>
+		public MessagesTemplateNode MainNode { get; }
 
 		public IMetadataCollection Metadata { get; }
 
@@ -28,7 +31,7 @@ namespace LLTSharp
 		/// <exception cref="ArgumentNullException"></exception>
 		public MessagesTemplate(MessagesTemplateNode mainNode, IMetadataCollection metadata, TemplateLibrary localLibrary)
 		{
-			_node = mainNode ?? throw new ArgumentNullException(nameof(mainNode));
+			MainNode = mainNode ?? throw new ArgumentNullException(nameof(mainNode));
 			Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
 			LocalLibrary = localLibrary ?? throw new ArgumentNullException(nameof(localLibrary));
 		}
@@ -36,13 +39,13 @@ namespace LLTSharp
 		public IEnumerable<Message> Render(object? context = null, TemplateFunctionSet? functions = null)
 		{
 			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, functions: functions, library: LocalLibrary);
-			return _node.Render(ctx);
+			return MainNode.Render(ctx);
 		}
 
 		object ITemplate.Render(object? context, TemplateFunctionSet? functions)
 		{
 			var ctx = new TemplateContextAccessor(TemplateDataAccessor.Create(context), Metadata, functions: functions, library: LocalLibrary);
-			return _node.Render(ctx);
+			return MainNode.Render(ctx);
 		}
 	}
 }
