@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -18,6 +19,8 @@ namespace LLTSharp.DataAccessors
 		{
 			Value = value;
 		}
+
+		public override string Type => "number";
 
 		public override bool AsBoolean()
 		{
@@ -39,7 +42,11 @@ namespace LLTSharp.DataAccessors
 			return type switch
 			{
 				UnaryOperatorType.Negate => new TemplateNumberAccessor(-Value),
+
 				UnaryOperatorType.LogicalNot => new TemplateBooleanAccessor(!AsBoolean()),
+
+				UnaryOperatorType.LengthOf => new TemplateNumberAccessor(Length),
+
 				_ => throw new TemplateRuntimeException("Invalid operator type for number.", dataAccessor: this)
 			};
 		}
@@ -69,6 +76,8 @@ namespace LLTSharp.DataAccessors
 
 				BinaryOperatorType.LogicalAnd => new TemplateBooleanAccessor(AsBoolean() && other.AsBoolean()),
 				BinaryOperatorType.LogicalOr => new TemplateBooleanAccessor(AsBoolean() || other.AsBoolean()),
+
+				BinaryOperatorType.Coalesce => this,
 
 				_ => throw new TemplateRuntimeException($"Unknown operator type: {type}")
 			};

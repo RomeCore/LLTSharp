@@ -21,6 +21,8 @@ namespace LLTSharp.DataAccessors
 			Value = value ?? string.Empty;
 		}
 
+		public override string Type => "string";
+
 		public override bool AsBoolean()
 		{
 			return !string.IsNullOrEmpty(Value);
@@ -74,7 +76,9 @@ namespace LLTSharp.DataAccessors
 			return type switch
 			{
 				UnaryOperatorType.LogicalNot => new TemplateBooleanAccessor(!AsBoolean()),
-				
+
+				UnaryOperatorType.LengthOf => new TemplateNumberAccessor(Length),
+
 				_ => throw new TemplateRuntimeException(
 					$"Unary operator '{type}' is not valid for string values",
 					dataAccessor: this)
@@ -107,6 +111,8 @@ namespace LLTSharp.DataAccessors
 					throw new TemplateRuntimeException(
 						$"Arithmetic operator '{type}' cannot be applied to string values",
 						dataAccessor: this),
+
+				BinaryOperatorType.Coalesce => this,
 
 				_ => throw new TemplateRuntimeException(
 					$"Unknown operator type: {type}",

@@ -14,6 +14,11 @@ namespace LLTSharp
 	public abstract class TemplateDataAccessor : IDisposable
 	{
 		/// <summary>
+		/// Gets the type of the data. This can be used to determine how to handle the data during rendering.
+		/// </summary>
+		public virtual string Type => "unknown";
+
+		/// <summary>
 		/// Gets the length of the data if it is an array or a string.
 		/// </summary>
 		public virtual int Length => 0;
@@ -136,6 +141,30 @@ namespace LLTSharp
 		/// </summary>
 		/// <returns>The value of the current context.</returns>
 		public abstract object GetValue();
+
+		/// <summary>
+		/// Gets the value of the current context converted to a specific type.
+		/// </summary>
+		/// <typeparam name="T">The type to convert the current context to.</typeparam>
+		/// <returns>The value of the current context converted to the specified type. If no data is found, returns the default value for the type.</returns>
+		/// <exception cref="TemplateRuntimeException">Thrown when value conversion is failed.</exception>
+		public T GetValue<T>()
+		{
+			var value = GetValue();
+			if (value is T res1)
+				return res1;
+			if (value is null)
+				return default;
+
+			try
+			{
+				return Convert.ChangeType(value, typeof(T)) is T res2 ? res2 : default;
+			}
+			catch (Exception ex)
+			{
+				throw new TemplateRuntimeException($"Cannot convert value '{value}' to type '{typeof(T)}'", ex, this);
+			}
+		}
 
 		/// <summary>
 		/// Converts the template data to a string representation.

@@ -27,6 +27,8 @@ namespace LLTSharp.DataAccessors
 			_array = array?.ToArray() ?? throw new ArgumentNullException(nameof(array));
 		}
 
+		public override string Type => "array";
+
 		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
 		{
 			try
@@ -69,6 +71,8 @@ namespace LLTSharp.DataAccessors
 			{
 				UnaryOperatorType.LogicalNot => new TemplateBooleanAccessor(!AsBoolean()),
 
+				UnaryOperatorType.LengthOf => new TemplateNumberAccessor(Length),
+
 				_ => throw new TemplateRuntimeException(
 					$"Unary operator '{type}' is not valid for array values",
 					dataAccessor: this)
@@ -103,6 +107,8 @@ namespace LLTSharp.DataAccessors
 					throw new TemplateRuntimeException(
 						$"Operator '{type}' cannot be applied to array values",
 						dataAccessor: this),
+
+				BinaryOperatorType.Coalesce => this,
 
 				_ => throw new TemplateRuntimeException(
 					$"Unknown operator type: {type}",

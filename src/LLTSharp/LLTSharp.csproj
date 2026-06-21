@@ -8,7 +8,7 @@
 
 	<PropertyGroup>
 		<PackageId>LLTSharp</PackageId>
-		<Version>1.4.0</Version>
+		<Version>1.5.0</Version>
 		<Authors>Roman K.</Authors>
 		<Company>RomeCore</Company>
 		<Product>LLTSharp</Product>
@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="RCParsing" Version="5.1.0" />
+		<PackageReference Include="RCParsing" Version="5.2.0" />
 	</ItemGroup>
 
 </Project>

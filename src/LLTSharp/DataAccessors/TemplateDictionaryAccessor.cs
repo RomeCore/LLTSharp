@@ -41,6 +41,8 @@ namespace LLTSharp.DataAccessors
 			Dictionary = new ReadOnlyDictionary<string, TemplateDataAccessor>(_dictionary);
 		}
 
+		public override string Type => "object";
+
 		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
 		{
 			return Property(index.ToString(), safe);
@@ -78,6 +80,9 @@ namespace LLTSharp.DataAccessors
 			return type switch
 			{
 				UnaryOperatorType.LogicalNot => new TemplateBooleanAccessor(!AsBoolean()),
+
+				UnaryOperatorType.LengthOf => new TemplateNumberAccessor(Length),
+
 				_ => throw new TemplateRuntimeException(
 					$"Unary operator '{type}' is not valid for dictionary values",
 					dataAccessor: this)
@@ -112,6 +117,8 @@ namespace LLTSharp.DataAccessors
 					throw new TemplateRuntimeException(
 						$"Operator '{type}' cannot be applied to dictionary values",
 						dataAccessor: this),
+
+				BinaryOperatorType.Coalesce => this,
 
 				_ => throw new TemplateRuntimeException(
 					$"Unknown operator type: {type}",

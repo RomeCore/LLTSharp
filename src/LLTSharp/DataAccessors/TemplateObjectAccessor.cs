@@ -27,6 +27,8 @@ namespace LLTSharp.DataAccessors
 			_propertyAccessors = CreatePropertyAccessors(target, options);
 		}
 
+		public override string Type => "object";
+
 		private static IReadOnlyDictionary<string, Func<object?>> CreatePropertyAccessors(object obj, DataAccessorCreationOptions options)
 		{
 			var accessors = new Dictionary<string, Func<object?>>();

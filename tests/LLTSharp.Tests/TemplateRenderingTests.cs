@@ -158,6 +158,88 @@ namespace LLTSharp.Tests
 		}
 
 		[Fact]
+		public void NullSafetyRendering()
+		{
+			var template = new LLTParser().Parse(
+			"""
+			@template t {
+				1: @(?value ?? 'No value')
+				2: @(ctx ?: 'value' ? value ?? 'Null' : 'No value')
+			}
+			""").First() as ITextTemplate ?? throw new InvalidOperationException("The parsed template is not an instance of ITextTemplate.");
+
+			var result1 = template.Render(new { value = "Hello" });
+			var result2 = template.Render(new { value = (string?)null });
+			var result3 = template.Render(new { });
+
+			// Value is present
+			Assert.Equal(
+				"""
+				1: Hello
+				2: Hello
+				""",
+				result1);
+
+			// In case 1 there is coalescing works, in case 2 we have a property, but it's null.
+			Assert.Equal(
+				"""
+				1: No value
+				2: Null
+				""",
+				result2);
+
+			// Property is not present at all
+			Assert.Equal(
+				"""
+				1: No value
+				2: No value
+				""",
+				result3);
+		}
+
+		[Fact]
+		public void DynamicArraysRendering()
+		{
+			var template = new LLTParser().Parse(
+			"""
+			@template t {
+				@let arr = [ ctx, ctx?.value, ctx ?: 'value' ]
+				@foreach item in arr {
+					- @type(item)
+				}
+			}
+			""").First() as ITextTemplate ?? throw new InvalidOperationException("The parsed template is not an instance of ITextTemplate.");
+
+			var result1 = template.Render(new { value = "Hello" });
+			var result2 = template.Render(new { value = (string?)null });
+			var result3 = template.Render(new { });
+
+			Assert.Equal(
+				"""
+				- object
+				- string
+				- boolean
+				""",
+				result1);
+
+			Assert.Equal(
+				"""
+				- object
+				- null
+				- boolean
+				""",
+				result2);
+
+			Assert.Equal(
+				"""
+				- object
+				- null
+				- boolean
+				""",
+				result3);
+		}
+
+		[Fact]
 		public void MessagesTemplateRendering()
 		{
 			var parser = new LLTParser();

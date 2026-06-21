@@ -449,6 +449,22 @@ namespace LLTSharp
 		}
 
 		/// <summary>
+		/// Parses the specified template contents into a collection of templates without importing to library.
+		/// </summary>
+		/// <param name="templateContents">The contents of the template to parse. Cannot be <see langword="null"/>.</param>
+		/// <param name="languageCode">The language code of the template contents. Defaults to "llt".</param>
+		/// <returns>A collection of templates parsed from the specified contents. Cannot be <see langword="null"/>.</returns>
+		/// <exception cref="ArgumentException">Thrown when no parser is registered for the specified language code.</exception>
+		/// <exception cref="ParsingException">Thrown when the template contents cannot be parsed.</exception>
+		public IEnumerable<ITemplate> ParseString(string templateContents, string languageCode = "llt")
+		{
+			if (!TryGetParser(languageCode, out var parser))
+				throw new ArgumentException($"No parser registered for language: '{languageCode}'.");
+
+			return parser.Parse(templateContents, MetadataFactories);
+		}
+
+		/// <summary>
 		/// Imports a set of templates from the specified string contents.
 		/// </summary>
 		/// <param name="templateContents">The string contents containing the templates to import.</param>

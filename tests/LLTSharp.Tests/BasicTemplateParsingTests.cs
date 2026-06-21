@@ -21,7 +21,7 @@ namespace LLTSharp.Tests
 		[Fact]
 		public void ExpressionsASTPasing()
 		{
-			var parser = LLTParser.Parser;
+			var parser = new LLTParser().Parser;
 
 			var value = parser.ParseRule("expression", "1 + 2 * 3 - 10").GetValue<TemplateExpressionNode>();
 			Assert.Equal("((1 + (2 * 3)) - 10)", value.ToString());

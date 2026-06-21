@@ -17,55 +17,82 @@ namespace LLTSharp
 	/// </summary>
 	public class LLTParser : ITemplateParser
 	{
-		private class LLTParsingContext
+		protected class LLTParsingContext
 		{
 			public TemplateLibrary LocalLibrary { get; set; }
 			public IEnumerable<MetadataFactory> MetadataFactories { get; set; }
 		}
 
-		private static readonly Parser _parser;
-
-		public static Parser Parser => _parser;
-
 		private static void DeclareValues(ParserBuilder builder)
 		{
 			builder.CreateToken("identifier")
-				.Identifier()
-				.Transform(v => v.Text);
+				.CaptureText(b => b.Identifier());
+
+			builder.CreateToken("identifier_or_string")
+				.Choice(
+					b => b.CaptureText(b => b.Identifier()),
+					b => b
+						.Literal('\'')
+						.EscapedTextDoubleChars('\'')
+						.Literal('\'')
+						.Pass(1),
+					b => b
+						.Literal('"')
+						.EscapedTextDoubleChars('"')
+						.Literal('"')
+						.Pass(1)
+				);
 
 			builder.CreateToken("method_name")
-				.Identifier()
-				.Transform(v => v.Text);
+				.CaptureText(b => b.Identifier());
 
 			builder.CreateToken("field_name")
-				.Identifier()
-				.Transform(v => v.Text);
+				.CaptureText(b => b.Identifier());
 
 			builder.CreateToken("number")
-				.Number<double>()
-				.Transform(v => new TemplateNumberAccessor(v.GetIntermediateValue<double>()));
+				.Map<double>(b => b.Number<double>(), n => new TemplateNumberAccessor(n));
 
 			builder.CreateToken("string")
-				.Literal('\'')
-				.EscapedTextDoubleChars('\'')
-				.Literal('\'')
-				.Pass(1)
+				.Choice(
+					b => b
+						.Literal('\'')
+						.EscapedTextDoubleChars('\'')
+						.Literal('\'')
+						.Pass(1),
+					b => b
+						.Literal('"')
+						.EscapedTextDoubleChars('"')
+						.Literal('"')
+						.Pass(1)
+				)
 				.Transform(v => new TemplateStringAccessor(v.GetIntermediateValue<string>()));
 
 			builder.CreateToken("raw_string")
-				.Literal('\'')
-				.EscapedTextDoubleChars('\'')
-				.Literal('\'')
-				.Pass(1)
+				.Choice(
+					b => b
+						.Literal('\'')
+						.EscapedTextDoubleChars('\'')
+						.Literal('\'')
+						.Pass(1),
+					b => b
+						.Literal('"')
+						.EscapedTextDoubleChars('"')
+						.Literal('"')
+						.Pass(1)
+				)
 				.Transform(v => v.GetIntermediateValue<string>());
 
 			builder.CreateToken("boolean")
-				.LiteralChoice("true", "false")
-				.Transform(v => new TemplateBooleanAccessor(v.GetIntermediateValue<string>() == "true"));
+				.LiteralChoice(("true", TemplateBooleanAccessor.True),
+							   ("false", TemplateBooleanAccessor.False));
 
 			builder.CreateToken("null")
-				.Literal("null")
-				.Transform(v => TemplateNullAccessor.Instance);
+				.Return(b => b.Literal("null"), TemplateNullAccessor.Instance);
+
+			builder.CreateToken("literal")
+				.LiteralChoice(("true", TemplateBooleanAccessor.True),
+							   ("false", TemplateBooleanAccessor.False),
+							   ("null", TemplateNullAccessor.Instance));
 
 			// Constants //
 
@@ -73,13 +100,12 @@ namespace LLTSharp
 				.Choice(
 					c => c.Token("number"),
 					c => c.Token("string"),
-					c => c.Token("boolean"),
-					c => c.Token("null"),
+					c => c.Token("literal"),
 					c => c.Rule("constant_array"),
 					c => c.Rule("constant_object"));
 
 			builder.CreateRule("constant_pair")
-				.Token("identifier")
+				.Token("identifier_or_string")
 				.Literal(":")
 				.Rule("constant")
 				.Transform(v => new KeyValuePair<string, TemplateDataAccessor>(v.GetValue<string>(0), v.GetValue<TemplateDataAccessor>(2)));
@@ -87,14 +113,12 @@ namespace LLTSharp
 			builder.CreateRule("constant_array")
 				.Literal("[")
 				.ZeroOrMoreSeparated(b => b.Rule("constant"), b => b.Literal(","), allowTrailingSeparator: true)
-					.ConfigureLast(c => c.Skip(b => b.Rule("skip"), ParserSkippingStrategy.SkipBeforeParsingGreedy))
 				.Literal("]")
 				.Transform(v => new TemplateArrayAccessor(v.Children[1].SelectValues<TemplateDataAccessor>()));
 
 			builder.CreateRule("constant_object")
 				.Literal("{")
 				.ZeroOrMoreSeparated(b => b.Rule("constant_pair"), b => b.Literal(","), allowTrailingSeparator: true)
-					.ConfigureLast(c => c.Skip(b => b.Rule("skip"), ParserSkippingStrategy.SkipBeforeParsingGreedy))
 				.Literal("}")
 				.Transform(v =>
 				{
@@ -103,6 +127,40 @@ namespace LLTSharp
 				});
 
 			// Expression values //
+
+			builder.CreateRule("pair_key")
+				.Choice(
+					b => b
+						.Literal('[')
+						.Rule("expression")
+						.Literal(']')
+						.TransformSelect(1),
+					b => b.Token("identifier_or_string")
+						.Transform(v => new TemplateStringAccessor(v.GetIntermediateValue<string>()))
+				)
+				.Transform(v => new TemplateDataAccessorExpressionNode(v.GetValue<TemplateDataAccessor>(0)));
+
+			builder.CreateRule("pair")
+				.Rule("pair_key")
+				.Literal(":")
+				.Rule("expression")
+				.Transform(v => new KeyValuePair<TemplateExpressionNode, TemplateExpressionNode>(v.GetValue<TemplateExpressionNode>(0), v.GetValue<TemplateExpressionNode>(2)));
+
+			builder.CreateRule("array")
+				.Literal("[")
+				.ZeroOrMoreSeparated(b => b.Rule("expression"), b => b.Literal(","), allowTrailingSeparator: true)
+				.Literal("]")
+				.Transform(v => new TemplateArrayExpressionNode(v.Children[1].SelectValues<TemplateExpressionNode>()));
+
+			builder.CreateRule("object")
+				.Literal("{")
+				.ZeroOrMoreSeparated(b => b.Rule("pair"), b => b.Literal(","), allowTrailingSeparator: true)
+				.Literal("}")
+				.Transform(v =>
+				{
+					var pairs = v.Children[1].SelectValues<KeyValuePair<TemplateExpressionNode, TemplateExpressionNode>>();
+					return new TemplateObjectExpressionNode(pairs.ToDictionary(p => p.Key, p => p.Value));
+				});
 
 			builder.CreateRule("function_access")
 				.Identifier()
@@ -122,18 +180,25 @@ namespace LLTSharp
 
 			builder.CreateRule("context_access")
 				.Choice(
-					b => b.Literal("ctx")
+					b => b
+						.Literal("ctx")
 							.Transform(_ => new TemplateContextAccessExpressionNode()),
-					b => b.Optional(b => b.Literal('?'))
-						  .Identifier()
+					b => b
+						.NegativeLookahead(b => b.Token("literal"))
+						.Optional(b => b.Literal('?'))
+						.Identifier()
 							.Transform(v => new TemplatePropertyExpressionNode(
-								new TemplateContextAccessExpressionNode(), v[1].Text, v[0].Length > 0)));
+								new TemplateContextAccessExpressionNode(), v[2].Text, v[1].Length > 0)));
 
 			builder.CreateRule("primary")
 				.Choice(
-					c => c.Rule("constant"),
+					c => c.Rule("array"),
+					c => c.Rule("object"),
 					c => c.Rule("function_access"),
 					c => c.Rule("context_access"),
+					c => c.Token("number"),
+					c => c.Token("string"),
+					c => c.Token("literal"),
 					c => c.Literal('(').Rule("expression").Literal(')').Transform(v => v.GetValue(1)))
 				.Transform(v =>
 				{
@@ -751,7 +816,12 @@ namespace LLTSharp
 				.Transform(v => v.Children[0].SelectArray<ITemplate>());
 		}
 
-		static LLTParser()
+		/// <summary>
+		/// The parser that is used to parse the input.
+		/// </summary>
+		public Parser Parser { get; }
+
+		public LLTParser()
 		{
 			var builder = new ParserBuilder();
 
@@ -760,7 +830,7 @@ namespace LLTSharp
 				.Choice(
 					c => c.Whitespaces(),
 					c => c.Literal("@/").TextUntil('\n', '\r'), // @/ C#-like comments
-					c => c.Literal("@*").TextUntil("*@").Literal("*@")) // @*...*@ comments
+					c => c.Literal("@*").TextUntil("*@").Literal("*@")) // @*...*@ Razor-like comments
 					.ConfigureForSkip(); // Ignore all errors when parsing comments and unnecessary whitespace
 
 			// Settings //
@@ -783,17 +853,24 @@ namespace LLTSharp
 			// ---- Main rules ---- //
 			DeclareMainRules(builder);
 
-			_parser = builder.Build();
+			// Modify parser if inheritors want to add more rules or modify the existing ones
+			ModifyParser(builder);
+
+			Parser = builder.Build();
 		}
 
-		public IEnumerable<ITemplate> Parse(string templateString, IEnumerable<MetadataFactory>? metadataFactories = null)
+		protected virtual void ModifyParser(ParserBuilder builder)
+		{
+		}
+
+		public virtual IEnumerable<ITemplate> Parse(string templateString, IEnumerable<MetadataFactory>? metadataFactories = null)
 		{
 			var ctx = new LLTParsingContext
 			{
 				LocalLibrary = new TemplateLibrary(),
 				MetadataFactories = metadataFactories?.ToList() ?? Enumerable.Empty<MetadataFactory>()
 			};
-			return _parser.Parse(templateString, ctx).GetValue<IEnumerable<ITemplate>>();
+			return Parser.Parse(templateString, ctx).GetValue<IEnumerable<ITemplate>>();
 		}
 	}
 }

@@ -185,8 +185,46 @@ namespace LLTSharp
 			return Context.Property(key, safe);
 		}
 
+		public override bool HasProperty(string name)
+		{
+			foreach (var frame in _frames)
+			{
+				var data = frame.TryGetVariable(name);
+				if (data != null)
+					return true;
+			}
+
+			return Context.HasProperty(name);
+		}
+
+		public override TemplateDataAccessor Index(TemplateDataAccessor index, bool safe)
+		{
+			return Context.Index(index, safe);
+		}
+
+		public override TemplateDataAccessor Operator(TemplateDataAccessor other, BinaryOperatorType type)
+		{
+			return Context.Operator(other, type);
+		}
+
+		public override TemplateDataAccessor Operator(UnaryOperatorType type)
+		{
+			return Context.Operator(type);
+		}
+
+		public override string Type => Context.Type;
+
+		public override int Length => Context.Length;
+
 		public override TemplateDataAccessor Call(string methodName, bool safe, TemplateDataAccessor[] arguments)
 		{
+			if (safe)
+			{
+				var function = Functions.TryGetFunction(methodName);
+				if (function != null)
+					return function.Call(this, arguments);
+				return TemplateNullAccessor.Instance;
+			}
 			return Functions.CallFunction(methodName, this, arguments);
 		}
 
